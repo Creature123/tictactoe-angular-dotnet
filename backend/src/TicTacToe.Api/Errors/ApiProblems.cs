@@ -42,6 +42,32 @@ public static class ApiProblems
     public static ObjectResult InvalidRequest() => Create(StatusCodes.Status400BadRequest, "Invalid request",
         "INVALID_REQUEST", "The request is missing a field or has an invalid value.");
 
+    /// <summary>
+    /// Adds an <c>errorCode</c> (and a player-readable <c>detail</c>) to ProblemDetails that the framework writes
+    /// before a controller runs: a 415 for a non-JSON body and a 404 for a path that matches no route (BE-10).
+    /// </summary>
+    public static void AddFrameworkErrorCode(ProblemDetailsContext context)
+    {
+        var problem = context.ProblemDetails;
+        if (problem.Extensions.ContainsKey("errorCode"))
+        {
+            return;
+        }
+
+        (string ErrorCode, string Detail)? mapped = problem.Status switch
+        {
+            StatusCodes.Status415UnsupportedMediaType => ("UNSUPPORTED_MEDIA_TYPE", "The request body must be JSON."),
+            StatusCodes.Status404NotFound => ("NOT_FOUND", "There is no endpoint at that address."),
+            _ => null,
+        };
+
+        if (mapped is { } m)
+        {
+            problem.Extensions["errorCode"] = m.ErrorCode;
+            problem.Detail ??= m.Detail;
+        }
+    }
+
     private static ObjectResult Create(int status, string title, string errorCode, string detail)
     {
         var problem = new ProblemDetails

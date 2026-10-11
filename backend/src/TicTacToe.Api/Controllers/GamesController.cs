@@ -76,20 +76,21 @@ public sealed class GamesController(GameService games, ILogger<GamesController> 
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public IActionResult Reset(string id) => Run(id, _games.Reset);
 
-    private IActionResult Run(string id, Func<Guid, GameResult> action) =>
+    private IActionResult Run(string id, Func<Guid, GameUpdate> action) =>
         TryParseId(id) is { } gameId
             ? ToActionResult(gameId, action(gameId))
             : ApiProblems.For(GameError.GameNotFound);
 
     /// <summary>The one place where a domain result becomes a response; rejected actions are logged here.</summary>
-    private IActionResult ToActionResult(Guid gameId, GameResult result, Position? position = null)
+    private IActionResult ToActionResult(Guid gameId, GameUpdate update, Position? position = null)
     {
-        if (result.Game is { } game)
+        if (update.Game is { } game)
         {
-            return Ok(ToResponse(game));
+            // Use the scoreboard read under the game lock, not a fresh read that a concurrent reset could change.
+            return Ok(GameStateResponse.From(game, update.Scoreboard));
         }
 
-        var error = result.Error ?? throw new InvalidOperationException("A failed result has no error.");
+        var error = update.Error ?? throw new InvalidOperationException("A failed result has no error.");
         _logger.LogInformation("Rejected game action for {GameId}: {ErrorCode}", gameId, ApiProblems.ErrorCode(error));
         return ApiProblems.For(error, position);
     }

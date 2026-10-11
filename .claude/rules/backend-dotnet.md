@@ -35,5 +35,7 @@ paths:
 - 409: rule conflict (occupied cell, wrong player, game already completed, nothing to undo).
 - Every error is ProblemDetails with `title`, `detail` and an `errorCode` extension
   (`CELL_OCCUPIED`, `NOT_YOUR_TURN`, `GAME_COMPLETED`, `NOTHING_TO_UNDO`, `OUT_OF_BOUNDS`, `GAME_NOT_FOUND`, `INVALID_REQUEST`).
+  Framework-generated errors get one too via `CustomizeProblemDetails`: 415 → `UNSUPPORTED_MEDIA_TYPE`,
+  404 for an unmatched route → `NOT_FOUND`.
 - Keep `TicTacToe.Api.http` updated with one runnable sample request per endpoint.
 - CORS allows only `http://localhost:4200` in Development.

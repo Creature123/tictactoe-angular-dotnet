@@ -63,6 +63,41 @@ describe('GamePage', () => {
     expect(store.play).toHaveBeenCalledExactlyOnceWith(1, 2);
   });
 
+  const button = (text: string) =>
+    Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes(text),
+    )!;
+
+  it('starts a new game in the picked mode (FE-08)', async () => {
+    store.state.set(gameState());
+    await fixture.whenStable();
+    store.newGame.mockClear();
+
+    button('Computer').click();
+
+    expect(store.newGame).toHaveBeenCalledExactlyOnceWith('VsComputer');
+  });
+
+  it('sends one reset when Reset Game is clicked (FE-05)', async () => {
+    store.state.set(gameState());
+    await fixture.whenStable();
+
+    button('Reset Game').click();
+
+    expect(store.reset).toHaveBeenCalledOnce();
+    expect(store.resetScoreboard).not.toHaveBeenCalled();
+  });
+
+  it('sends one scoreboard reset when Reset Scoreboard is clicked (FE-05)', async () => {
+    store.state.set(gameState());
+    await fixture.whenStable();
+
+    button('Reset Scoreboard').click();
+
+    expect(store.resetScoreboard).toHaveBeenCalledOnce();
+    expect(store.reset).not.toHaveBeenCalled();
+  });
+
   it('shows the API error in a dismissible banner (FE-07)', async () => {
     store.error.set('Row 1, Column 1 is already taken.');
     await fixture.whenStable();

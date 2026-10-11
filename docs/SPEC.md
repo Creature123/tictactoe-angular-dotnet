@@ -198,6 +198,15 @@ Base path `/api`. JSON uses camelCase, and enums are strings. Positions are 0-ba
 | E6 | `GET /api/scoreboard` | — | 200 `{ "xWins": 2, "oWins": 1, "draws": 0 }` | — |
 | E7 | `POST /api/scoreboard/reset` | — | 200 `{ "xWins": 0, "oWins": 0, "draws": 0 }` | — |
 
+Framework-level errors are written by ASP.NET Core before any controller runs. They still get an `errorCode` (BE-10):
+
+| Status · errorCode | When |
+|--------------------|------|
+| 415 · `UNSUPPORTED_MEDIA_TYPE` | A request body sent with a Content-Type other than JSON (for example `text/plain` on E3) |
+| 404 · `NOT_FOUND` | A path that matches no endpoint (unmatched route) |
+
+Known limitation: a 415 is returned before the A-10 check for an unknown game, so a non-JSON body sent to an unknown game id returns 415 instead of 404 `GAME_NOT_FOUND`.
+
 Example E3 win response (TwoPlayer, FR-09): `"status": "Won", "winner": "X", "winningCells": [0,1,2], "currentPlayer": null, "canUndo": false`.
 
 ## 6. Computer strategy

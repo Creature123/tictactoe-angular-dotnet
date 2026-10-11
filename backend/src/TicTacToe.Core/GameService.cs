@@ -22,12 +22,12 @@ public sealed class GameService(IGameRepository repository, Scoreboard scoreboar
     /// <summary>A read needs no lock: a stored game is an immutable snapshot.</summary>
     public Game? GetGame(Guid id) => _repository.Find(id);
 
-    public GameResult MakeMove(Guid id, Player player, Position position) =>
+    public GameUpdate MakeMove(Guid id, Player player, Position position) =>
         Mutate(id, game => game.Play(player, position));
 
-    public GameResult Undo(Guid id) => Mutate(id, game => game.Undo());
+    public GameUpdate Undo(Guid id) => Mutate(id, game => game.Undo());
 
-    public GameResult Reset(Guid id) => Mutate(id, game => GameResult.Success(game.Reset()));
+    public GameUpdate Reset(Guid id) => Mutate(id, game => GameResult.Success(game.Reset()));
 
     public ScoreSnapshot GetScoreboard() => _scoreboard.Snapshot();
 
@@ -39,14 +39,15 @@ public sealed class GameService(IGameRepository repository, Scoreboard scoreboar
 
     /// <summary>
     /// Read → change → score → store under the game's lock (SPEC I-7), so two concurrent requests can never
-    /// both build on the same version or both score the same result.
+    /// both build on the same version or both score the same result. The returned scoreboard is read under the
+    /// same lock, so it always matches the returned game.
     /// </summary>
-    private GameResult Mutate(Guid id, Func<Game, GameResult> change)
+    private GameUpdate Mutate(Guid id, Func<Game, GameResult> change)
     {
         // Check first so unknown ids do not each leave a lock behind.
         if (_repository.Find(id) is null)
         {
-            return GameResult.Failure(GameError.GameNotFound);
+            return new GameUpdate(null, GameError.GameNotFound, _scoreboard.Snapshot());
         }
 
         lock (_gameLocks.GetOrAdd(id, _ => new Lock()))
@@ -54,22 +55,23 @@ public sealed class GameService(IGameRepository repository, Scoreboard scoreboar
             // Re-read under the lock: another request may have stored a newer version since the check above.
             if (_repository.Find(id) is not { } before)
             {
-                return GameResult.Failure(GameError.GameNotFound);
+                return new GameUpdate(null, GameError.GameNotFound, _scoreboard.Snapshot());
             }
 
             var result = change(before);
-            if (result.Game is { } after)
+            if (result.Game is not { } after)
             {
-                // Score exactly once, on the InProgress → Won/Draw transition (I-6).
-                if (before.Status == GameStatus.InProgress && after.Status != GameStatus.InProgress)
-                {
-                    _scoreboard.Record(after);
-                }
-
-                _repository.Update(after);
+                return new GameUpdate(null, result.Error, _scoreboard.Snapshot());
             }
 
-            return result;
+            // Score exactly once, on the InProgress → Won/Draw transition (I-6). Record returns the counts that
+            // include this game, even if the scoreboard is reset straight afterwards.
+            var score = before.Status == GameStatus.InProgress && after.Status != GameStatus.InProgress
+                ? _scoreboard.Record(after)
+                : _scoreboard.Snapshot();
+
+            _repository.Update(after);
+            return new GameUpdate(after, null, score);
         }
     }
 }

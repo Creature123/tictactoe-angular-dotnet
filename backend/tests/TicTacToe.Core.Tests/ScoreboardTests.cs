@@ -21,6 +21,15 @@ public sealed class ScoreboardTests
     }
 
     [Fact]
+    [Trait("Req", "FR-14")]
+    public void Record_XWin_ReturnsUpdatedSnapshot()
+    {
+        var snapshot = _scoreboard.Record(TwoPlayer((0, 0), (1, 0), (0, 1), (1, 1), (0, 2)));
+
+        Assert.Equal(new ScoreSnapshot(1, 0, 0), snapshot);
+    }
+
+    [Fact]
     [Trait("Req", "I-6")]
     public void Record_InProgressGame_ThrowsAndCountsUnchanged()
     {

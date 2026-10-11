@@ -6,8 +6,11 @@ public sealed class Scoreboard
     private readonly Lock _lock = new();
     private ScoreSnapshot _score;
 
-    /// <summary>Counts a completed game. Called once, on the InProgress → Won/Draw transition.</summary>
-    public void Record(Game completedGame)
+    /// <summary>
+    /// Counts a completed game and returns the counts that include it. Called once, on the InProgress → Won/Draw
+    /// transition.
+    /// </summary>
+    public ScoreSnapshot Record(Game completedGame)
     {
         lock (_lock)
         {
@@ -18,6 +21,7 @@ public sealed class Scoreboard
                 { Status: GameStatus.Draw } => _score with { Draws = _score.Draws + 1 },
                 _ => throw new ArgumentException("Only a completed game can be recorded.", nameof(completedGame)),
             };
+            return _score;
         }
     }
 

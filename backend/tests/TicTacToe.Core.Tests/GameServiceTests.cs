@@ -178,6 +178,33 @@ public sealed class GameServiceTests
     }
 
     [Fact]
+    [Trait("Req", "FR-14")]
+    [Trait("Req", "I-7")]
+    public void MakeMove_WinningMove_ReturnsScoreboardIncludingThatWin()
+    {
+        var id = _service.CreateGame(GameMode.TwoPlayer).Id;
+        PlayTwoPlayer(id, (0, 0), (1, 0), (0, 1), (1, 1));
+
+        var update = _service.MakeMove(id, Player.X, new Position(0, 2));
+
+        Assert.Equal(GameStatus.Won, update.Ok().Status);
+        Assert.Equal(new ScoreSnapshot(1, 0, 0), update.Scoreboard);
+    }
+
+    [Fact]
+    [Trait("Req", "MH-08")]
+    public void MakeMove_NonFinalMove_ReturnsCurrentScoreboard()
+    {
+        var finished = _service.CreateGame(GameMode.TwoPlayer).Id;
+        PlayTwoPlayer(finished, (0, 0), (1, 0), (0, 1), (1, 1), (0, 2));
+        var id = _service.CreateGame(GameMode.TwoPlayer).Id;
+
+        var update = _service.MakeMove(id, Player.X, new Position(0, 0));
+
+        Assert.Equal(new ScoreSnapshot(1, 0, 0), update.Scoreboard);
+    }
+
+    [Fact]
     [Trait("Req", "MH-09")]
     public void MakeMove_AfterWin_RejectedAndScoreboardUnchanged()
     {

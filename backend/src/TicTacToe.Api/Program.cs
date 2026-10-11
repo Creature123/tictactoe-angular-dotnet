@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using TicTacToe.Api;
+using TicTacToe.Api.Errors;
 
 const string FrontendCorsPolicy = "Frontend";
 
@@ -13,7 +14,8 @@ builder.Services
     // Actions check ModelState themselves, after the game lookup, so 404 wins over 400 (A-10).
     .ConfigureApiBehaviorOptions(options => options.SuppressModelStateInvalidFilter = true);
 
-builder.Services.AddProblemDetails();
+// Framework-generated errors (415, unmatched-route 404) get an errorCode too (BE-10).
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = ApiProblems.AddFrameworkErrorCode);
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options => options.AddPolicy(FrontendCorsPolicy, policy =>
     policy.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod()));
@@ -24,6 +26,8 @@ var app = builder.Build();
 
 // Unexpected exceptions also become ProblemDetails (without internals).
 app.UseExceptionHandler();
+// Writes a ProblemDetails body for empty error responses, such as a 404 for a path that matches no route.
+app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {

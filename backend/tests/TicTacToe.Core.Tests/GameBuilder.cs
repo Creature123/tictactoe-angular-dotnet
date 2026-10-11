@@ -30,6 +30,14 @@ internal static class GameBuilder
         return result.Game;
     }
 
+    /// <summary>Asserts the service update is a success and returns the new game.</summary>
+    public static Game Ok(this GameUpdate update)
+    {
+        Assert.Null(update.Error);
+        Assert.NotNull(update.Game);
+        return update.Game;
+    }
+
     /// <summary>The board as 9 characters ("X", "O" or "." per cell), e.g. "XX.OO...X".</summary>
     public static string AsText(this IReadOnlyList<Player?> board) =>
         string.Concat(board.Select(cell => cell?.ToString() ?? "."));

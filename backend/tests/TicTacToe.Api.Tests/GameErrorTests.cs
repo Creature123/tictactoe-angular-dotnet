@@ -69,6 +69,28 @@ public sealed class GameErrorTests : ApiTestBase
     }
 
     [Fact]
+    [Trait("Req", "BE-10")]
+    public async Task Move_NonJsonContentType_Returns415UnsupportedMediaType()
+    {
+        var game = await CreateGameAsync(GameMode.TwoPlayer);
+
+        using var content = new StringContent("""{ "player": "X", "row": 0, "col": 0 }""", System.Text.Encoding.UTF8, "text/plain");
+        using var response = await Client.PostAsync($"/api/games/{game.Id}/moves", content);
+
+        await AssertProblemAsync(response, HttpStatusCode.UnsupportedMediaType, "UNSUPPORTED_MEDIA_TYPE");
+        Assert.Empty((await GetGameAsync(game.Id)).Moves);
+    }
+
+    [Fact]
+    [Trait("Req", "BE-10")]
+    public async Task UnmatchedRoute_Returns404NotFound()
+    {
+        using var response = await Client.GetAsync("/api/does-not-exist");
+
+        await AssertProblemAsync(response, HttpStatusCode.NotFound, "NOT_FOUND");
+    }
+
+    [Fact]
     [Trait("Req", "BE-09")]
     public async Task NonGuidId_Returns404GameNotFound()
     {
