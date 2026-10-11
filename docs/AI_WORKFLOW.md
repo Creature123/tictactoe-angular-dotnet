@@ -42,6 +42,8 @@ AI output, and my own review and changes. Each phase entry is appended at the en
 | Phase 1 | SPEC tie-break for "block" didn't cover an X fork (two threats) | Computer behaviour would be non-deterministic and untestable in a fork | Reviewed §6 strategy against my own walk-through scenarios | Required "block the lowest-indexed cell" + example T2 |
 | Phase 2 | global.json was placed in backend/ | dotnet resolves global.json from the working directory upward; commands run from the repo root would ignore it and could pick the .NET 6 SDK | Claude flagged it after creating the file; I verified with `dotnet --version` from the root | Moved global.json to the repo root |
 | Phase 3 | SPEC §6 example E4 (....X....) used for the corner-rule test | "First free cell" also gives 0, so the test would pass with the corner rule deleted | AI self-critique, which I triaged | Replaced E4 with O...X...X → 2 and pointed MH-19 at it |
+| Phase 4 | Class-level [Produces("application/json")] on the controller | Overrode application/problem+json on error responses – 13 tests failed | Integration tests asserting the problem+json content type | Removed the attribute |
+| Phase 4 | [property: Required] on positional record DTOs | MVC rejects validation attributes on positional-record properties | Claude flagged it after the first build, before any test run | Moved [Required] to the constructor parameters |
 ## Phase log
 <!-- Entries are appended below by /ai-workflow-log -->
 
@@ -242,3 +244,60 @@ Run dotnet test backend and give the summary line only.
 **Rejected AI suggestions:** 7, 9 and 10 for now – style/refactor only, not worth the time risk today.
 **Assumptions / trade-offs:** GameService, repository and scoreboard must be singletons because the per-game locks live in GameService (to be enforced in Phase 4).
 **Verification:** `dotnet test backend` at `ce14459` → Core.Tests 71 passed, 0 failed; Api.Tests 1 passed. After the hardening → Core.Tests 88 passed, 0 failed, 0 skipped; Api.Tests 1 passed. Checked by breaking the code: with the per-game lock removed temporarily, the concurrency test failed 5 runs out of 5 (lock restored, `GameService.cs` unchanged afterwards).
+
+### Phase 4 – REST API — 2026-10-11 19:06
+**Goal:** Expose the SPEC §5 contract (E1–E7) over HTTP with ProblemDetails errors, and cover it with isolated WebApplicationFactory integration tests.
+**Prompts used:**
+````
+Phase 4 – REST API. Use the dependency-injection-patterns skill for service registration.
+
+Implement TicTacToe.Api exactly per the API contract in @docs/SPEC.md section 5:
+- GamesController: POST /api/games, GET /api/games/{id}, POST /api/games/{id}/moves, POST /api/games/{id}/undo, POST /api/games/{id}/reset
+- ScoreboardController: GET /api/scoreboard, POST /api/scoreboard/reset
+- Request/response DTOs as records, separate from domain types; enums serialized as strings.
+- Map domain errors to ProblemDetails (400 / 404 / 409 with an errorCode extension) in ONE place, not in every action.
+- builder.Services.AddTicTacToe(); CORS for http://localhost:4200 in Development only; OpenAPI document in Development.
+- Update TicTacToe.Api.http with one request per endpoint plus one invalid-move example.
+
+Then write integration tests in TicTacToe.Api.Tests with WebApplicationFactory<Program>: one happy path per endpoint, one test per error (400 OUT_OF_BOUNDS, 404 GAME_NOT_FOUND, 409 CELL_OCCUPIED, NOT_YOUR_TURN, GAME_COMPLETED, NOTHING_TO_UNDO), and a full computer-mode round trip. The scoreboard is a singleton, so keep the tests isolated and explain how you did it.
+
+Show the plan first. Then implement and run `dotnet test backend`.
+````
+````
+Context budget: keep this session lean.
+- Read only the files you need; reference SPEC sections by number instead of re-reading the whole file.
+- Don't paste full file contents or full test output back to me – show a diff summary and the pass/fail summary line only.
+- If a step needs a broad search or review, delegate it to a subagent so its output doesn't fill this context.
+- Stop and tell me if you think the context is getting full before the task is done.
+````
+(Plan approved through the plan-mode dialog; no typed prompt.)
+````
+Add: (1) builder.Services.AddHealthChecks() + app.MapHealthChecks("/health") and an integration test that GET /health returns 200; (2) inject ILogger<GamesController> and log rejected moves at Information level with structured fields {GameId} and {ErrorCode} (in the Run helper, one place). Run dotnet test backend, summary line only.
+````
+````
+Approved as proposed – log in ToActionResult, ErrorCode() helper in ApiProblems, HealthCheckTests. Skip log-assertion tests. Implement and run dotnet test backend, summary line only.
+````
+````
+Add an interactive API UI for reviewers, Development only:
+- Add the Swashbuckle.AspNetCore.SwaggerUI package (UI only – keep the built-in Microsoft.AspNetCore.OpenApi document as the source).
+- app.UseSwaggerUI(o => { o.SwaggerEndpoint("/openapi/v1.json", "TicTacToe API v1"); o.RoutePrefix = "swagger"; });
+- Redirect "/" to "/swagger" in Development so opening http://localhost:5080 shows the UI instead of a 404.
+- Add a smoke test: GET /swagger/index.html returns 200.
+Run dotnet test backend, summary line only.
+````
+````
+Approved as proposed: Swashbuckle.AspNetCore.SwaggerUI 10.2.3, keep the redirect test. Implement and run dotnet test backend, summary line only.
+````
+**AI generated:**
+- `TicTacToeServiceCollectionExtensions.cs`: `AddTicTacToe()` registers the repository, `Scoreboard` and `GameService` as singletons (commented). It sits in the Api project so Core needs no DI package.
+- `Program.cs`: string enums (`allowIntegerValues: false`); `SuppressModelStateInvalidFilter` so 404 beats `INVALID_REQUEST` (A-10); `AddProblemDetails` + `UseExceptionHandler`; `/health`; Development-only CORS (:4200), OpenAPI, Swagger UI (Swashbuckle.AspNetCore.SwaggerUI 10.2.3) and the `/` → `/swagger` redirect.
+- `Contracts/`: request/response records with `From(...)` mappers; `currentPlayer` is null once finished (A-08); `[Required]` on nullable record parameters, no `[Range]` (OUT_OF_BOUNDS stays a domain rule).
+- `Errors/ApiProblems.cs`: the single error-mapping place (`For`, `InvalidRequest`, `ErrorCode()`), 1-based `detail`, `application/problem+json`.
+- `Controllers/`: thin `GamesController` (`string id` + `Guid.TryParse` → 404 for non-Guid ids, A-14; `ToActionResult` is the one place results become responses and logs rejections with `{GameId}`/`{ErrorCode}`); `ScoreboardController`.
+- `TicTacToe.Api.http`: one request per endpoint (chained via the created id), an OUT_OF_BOUNDS example, the OpenAPI document.
+- Tests: `ApiTestBase` (fresh host per test), `GamesEndpointTests`, `ScoreboardEndpointTests`, `GameErrorTests` (every errorCode + INVALID_REQUEST + A-10 precedence), `ComputerModeTests` (full draw round trip, undo pair), `HealthCheckTests`, Swagger/redirect smoke tests in `HostSmokeTests`.
+**Human review:** Reviewed line by line: ApiProblems (single error-mapping place + ErrorCode helper), AddTicTacToe singleton registration and its comment, Program.cs pipeline order (SuppressModelStateInvalidFilter for A-10, Development-only CORS/OpenAPI/Swagger), GamesController ToActionResult, and the ComputerModeTests round trip (traced X 0,1,6,5,7 → O 4,2,3,8 → draw by hand). Manually exercised the API via Swagger and the .http file.
+**Manual changes:** Requested /health and structured logging (observability); requested Swagger UI because .NET 9+ templates ship only the OpenAPI JSON – pinned Swashbuckle SwaggerUI 10.2.3 over 10.3.0 as the more established version.
+**Rejected AI suggestions:** None rejected; I accepted the AI's pushback that logging in Run would miss rejected moves – ToActionResult is the correct single place.
+**Assumptions / trade-offs:** Fresh WebApplicationFactory per test = full isolation of the singleton scoreboard at the cost of slower tests (fine at 36 tests). AddTicTacToe lives in the Api project to avoid adding a DI package to Core.
+**Verification:** `dotnet test backend` → first run: Api.Tests 13 failed (`[Produces]` overriding problem+json); after the fix → Core.Tests 88 passed, Api.Tests 33 passed. After health check + logging → Api.Tests 34 passed. After Swagger UI → Core.Tests 88 passed, Api.Tests 36 passed, 0 failed, 0 skipped.
