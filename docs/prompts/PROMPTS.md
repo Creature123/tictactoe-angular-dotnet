@@ -238,8 +238,11 @@ First write a failing test that reproduces it and show me it failing. Then make 
 ## Phase 8.1 – README
 
 ```text
-Write README.md for the interview panel. Use exactly these sections, in this order:
-1 Project overview · 2 Tech stack (versions read from the project files) · 3 Features implemented · 4 How to run the backend locally · 5 How to run the frontend locally · 6 API endpoint summary (table built from the controllers, with status codes; link the .http file and the OpenAPI URL) · 7 How to run tests (backend and frontend, plus a requirement → test mapping summary) · 8 AI tools and prompt summary (summarise docs/AI_WORKFLOW.md and link it; never invent prompts) · 9 Design decisions (from docs/DECISIONS.md: decision, why, trade-off) · 10 Clarifications and assumptions (state Undo Option A explicitly) · 11 Known limitations · 12 Future improvements.
-Add a "Quick start (2 terminals)" block at the top and a repository structure tree.
-Only include commands you have run successfully in this repo. Keep it skimmable: tables and short bullets, about 200 lines.
+Write README.md at the repo root for the interview panel. Use exactly these sections, in this order:
+1 Project overview · 2 Tech stack (versions read from the project files: .NET 10, Angular 22, Vitest, xUnit) · 3 Features implemented · 4 How to run the backend locally · 5 How to run the frontend locally · 6 API endpoint summary (table built from the controllers, with status codes and errorCodes; link the .http file, Swagger UI at http://localhost:5080/swagger and /health) · 7 How to run tests (backend and frontend commands + current counts, and a requirement → test mapping summary) · 8 AI tools and prompt summary (summarise docs/AI_WORKFLOW.md and docs/prompts/PROMPTS.md and link them; mention the Claude Code setup: CLAUDE.md, path-scoped rules, skills, code-reviewer/spec-verifier subagents, test-lock hook; never invent prompts) · 9 Design decisions (from docs/DECISIONS.md and D-01: decision, why, trade-off – table) · 10 Clarifications and assumptions (state Undo Option A explicitly; link SPEC.md) · 11 Known limitations (in-memory state lost on restart, single global scoreboard, no game eviction and per-game locks never trimmed, 415-before-404 ordering, HTTP only, no auth, computer is beatable by design) · 12 Future improvements.
+Also add: a CI status badge for .github/workflows/ci.yml at the top; a "Quick start (2 terminals)" block; a repository structure tree; a troubleshooting note: if npm skips devDependencies (NODE_ENV=production), run `npm install --include=dev`; prerequisites (.NET SDK 10.0.400 via global.json, Node 24).
+Mention the dark theme (OS default + toggle) under Features, and the index.html anti-flash script under Future improvements.
+Only include commands you have verified in this repo. Tables and short bullets, about 200–250 lines.
+
+Context budget: keep this session lean. Read only the files you need. Show me a section outline first, then write the file.
 ```

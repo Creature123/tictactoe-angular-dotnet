@@ -444,3 +444,35 @@ Leave gaps 6–7 as they are and FE-09 as a manual check.
 **Rejected AI suggestions:** Upgrading GitHub Actions to brand-new v7/v6 majors – kept the established @v4.
 **Assumptions / trade-offs:** 415-before-404 ordering for a wrong Content-Type on an unknown id accepted as a known limitation; MH-14 tested on the 7 SPEC boards only.
 **Verification:** `dotnet test backend` → Core.Tests 91 passed, Api.Tests 38 passed, 0 failed, 0 skipped. `cd frontend && npm test -- --watch=false` → 10 test files, 55 tests passed. GitHub Actions CI → green.
+
+### Phase 6b – Dark theme — 2026-10-11 19:58
+**Goal:** Add a dark theme (OS default, header toggle, persisted choice) using CSS design tokens only, with no game logic.
+**Prompts used:**
+```
+Add a dark theme to the Angular UI. Use the angular-developer skill.
+
+- Theme via CSS custom properties: move all colours in styles.scss into tokens on :root (light) and override them for dark. Components must use only the tokens – no hard-coded colours left in component .scss files.
+- Default follows the OS: @media (prefers-color-scheme: dark) applies dark unless the user has chosen otherwise.
+- A small toggle button in the page header (sun/moon icon + aria-label "Switch to dark/light theme") sets data-theme="light|dark" on <html>; the explicit choice wins over the OS preference.
+- Persist the choice in localStorage (wrapped in try/catch, so the app still works if storage is unavailable). Implement it as a small ThemeService with a signal; no game logic involved.
+- Dark palette: dark background, slightly lighter cards, readable text, X and O colours still clearly distinct, and the winning-cell highlight and focus outlines clearly visible (WCAG AA contrast).
+- Tests: ThemeService toggles and persists the choice, and falls back when storage throws; the toggle button sets data-theme on <html>.
+Run npm test -- --watch=false and npx ng build, summary lines only.
+
+Context budget: keep this session lean. Read only the files you need; show a diff summary, not full files.
+```
+```
+Approved as proposed. Skip the index.html flash script – note it for Future improvements. Implement, then npm test -- --watch=false and npx ng build, summary lines only.
+```
+**AI generated:**
+- `frontend/src/styles.scss`: new tokens `--color-accent-hover`, `--color-on-accent`, `--color-win-ring`, `--color-danger-border` and `color-scheme`; `.btn-primary` switched to tokens. The dark palette is written once as a `dark-tokens` mixin, applied under `@media (prefers-color-scheme: dark) :root:not([data-theme='light'])` and under `:root[data-theme='dark']`.
+- `board.scss`, `mode-selector.scss`, `game-page.scss`: the three remaining hard-coded colours replaced with tokens.
+- New `frontend/src/app/theme/theme.service.ts`: a `preference` signal (`'light' | 'dark' | null`, where null means follow the OS) and a computed `theme`. `toggle()` sets `data-theme` on `<html>` and saves the choice under localStorage key `ttt-theme`. Storage reads and writes are wrapped in try/catch, and a stored choice is applied at startup.
+- `app.html` / `app.ts` / `app.scss`: a `<header>` with a round sun/moon toggle (inline SVG, no package) whose aria-label switches between "Switch to dark theme" and "Switch to light theme". It lives in `App` rather than a new component because it is a single button.
+- Tests: new `theme.service.spec.ts` (6 tests: follows OS, toggles, persists, restores, ignores an invalid value, falls back when storage throws); `app.spec.ts` +1 (the toggle sets `data-theme` and flips the label).
+- Dark border colour changed from the planned `#334155` to `#475569` so board edges stay visible. AA contrast checked by script: all pairs pass, the lowest being the focus outline on cards at 4.90 (needs 3.0).
+**Human review:** Reviewed the styles.scss token layout (dark palette written once via mixin), the ThemeService try/catch storage handling and the AA contrast figures; verified visually in the browser in both themes.
+**Manual changes:** None.
+**Rejected AI suggestions:** index.html anti-flash script: out of scope tonight, listed as a future improvement.
+**Assumptions / trade-offs:** An extra beyond the brief, added only after every acceptance criterion was verified; design tokens make future theming a CSS-only change.
+**Verification:** `npm test -- --watch=false` → 11 test files, 62 tests passed · `npx ng build` → bundle generated, no errors or warnings.
