@@ -1,0 +1,20 @@
+:host {
+  display: block;
+}
+
+p {
+  margin: 0;
+}
+
+.mode {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.message {
+  font-size: 1.75rem;
+  font-weight: 700;
+}

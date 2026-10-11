@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
 
@@ -5,6 +7,8 @@ describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
+      // GamePage starts a game on init; keep that request inside the testing backend.
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
   });
 

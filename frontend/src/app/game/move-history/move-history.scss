@@ -1,0 +1,43 @@
+:host {
+  display: block;
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.scroll {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.x {
+  color: var(--color-x);
+  font-weight: 700;
+}
+
+.o {
+  color: var(--color-o);
+  font-weight: 700;
+}

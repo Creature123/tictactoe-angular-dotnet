@@ -1,0 +1,14 @@
+<div class="modes" role="group" aria-label="Game mode">
+  @for (m of modes; track m) {
+    <button
+      type="button"
+      class="mode"
+      [class.active]="m === mode()"
+      [attr.aria-pressed]="m === mode()"
+      [disabled]="disabled()"
+      (click)="select(m)"
+    >
+      {{ labels[m] }}
+    </button>
+  }
+</div>

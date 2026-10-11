@@ -1,0 +1,6 @@
+<button type="button" class="btn" [disabled]="!canUndo() || pending()" (click)="undo.emit()">
+  Undo Last Move
+</button>
+<button type="button" class="btn btn-primary" [disabled]="pending()" (click)="resetGame.emit()">
+  Reset Game
+</button>

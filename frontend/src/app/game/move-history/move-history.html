@@ -1,0 +1,25 @@
+<h2 class="card-title">Move history</h2>
+@if (moves().length === 0) {
+  <p class="empty">No moves yet.</p>
+} @else {
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Move</th>
+          <th scope="col">Player</th>
+          <th scope="col">Position</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (move of moves(); track move.number) {
+          <tr>
+            <td>{{ move.number }}</td>
+            <td [class]="move.player === 'X' ? 'x' : 'o'">{{ move.player }}</td>
+            <td>{{ position(move) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

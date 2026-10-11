@@ -1,0 +1,46 @@
+@if (store.error(); as error) {
+  <div class="error-banner" role="alert">
+    <span>{{ error }}</span>
+    <button type="button" class="dismiss" aria-label="Dismiss message" (click)="store.clearError()">
+      ×
+    </button>
+  </div>
+}
+
+<app-mode-selector
+  [mode]="store.state()?.mode ?? null"
+  [disabled]="store.pending()"
+  (modeChange)="store.newGame($event)"
+/>
+
+@if (store.state(); as state) {
+  <div class="layout">
+    <app-board
+      [board]="state.board"
+      [winningCells]="state.winningCells"
+      [disabled]="store.isGameOver() || store.pending()"
+      (cellSelected)="onCellSelected($event)"
+    />
+
+    <div class="side">
+      <section class="card status-card">
+        <app-game-status [message]="store.statusMessage()" [mode]="state.mode" />
+        <app-game-controls
+          [canUndo]="store.canUndo()"
+          [pending]="store.pending()"
+          (undo)="store.undo()"
+          (resetGame)="store.reset()"
+        />
+      </section>
+      <app-scoreboard
+        class="card"
+        [scoreboard]="state.scoreboard"
+        [pending]="store.pending()"
+        (resetScoreboard)="store.resetScoreboard()"
+      />
+      <app-move-history class="card" [moves]="state.moves" />
+    </div>
+  </div>
+} @else if (!store.error()) {
+  <p class="loading">Starting a new game…</p>
+}

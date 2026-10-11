@@ -1,0 +1,50 @@
+:host {
+  display: block;
+  --cell-size: clamp(88px, 11vw, 150px);
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, var(--cell-size));
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow);
+}
+
+.cell {
+  width: var(--cell-size);
+  aspect-ratio: 1;
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+  font-size: calc(var(--cell-size) * 0.5);
+  font-weight: 700;
+  line-height: 1;
+  transition: background-color 0.15s, border-color 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+  }
+
+  // Occupied cells are disabled but must stay fully readable.
+  &:disabled {
+    cursor: default;
+  }
+
+  &.x {
+    color: var(--color-x);
+  }
+
+  &.o {
+    color: var(--color-o);
+  }
+
+  &.winning {
+    border-color: var(--color-win-border);
+    background: var(--color-win-bg);
+    box-shadow: 0 0 0 3px rgb(245 158 11 / 35%);
+  }
+}

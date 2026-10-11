@@ -1,0 +1,18 @@
+<h2 class="card-title">Scoreboard</h2>
+<dl class="scores">
+  <div class="score x">
+    <dt>X wins</dt>
+    <dd>{{ scoreboard().xWins }}</dd>
+  </div>
+  <div class="score o">
+    <dt>O wins</dt>
+    <dd>{{ scoreboard().oWins }}</dd>
+  </div>
+  <div class="score">
+    <dt>Draws</dt>
+    <dd>{{ scoreboard().draws }}</dd>
+  </div>
+</dl>
+<button type="button" class="btn" [disabled]="pending()" (click)="resetScoreboard.emit()">
+  Reset Scoreboard
+</button>
