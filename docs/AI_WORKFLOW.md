@@ -47,6 +47,7 @@ AI output, and my own review and changes. Each phase entry is appended at the en
 | Phase 5a | ng new reported a successful install | NODE_ENV=production in the shell made npm skip devDependencies; @angular/build, vitest and prettier were missing | Claude noticed when the first build failed | npm install --include=dev; README note |
 | Phase 7 | Two MH-19 tests with the same board and expectation | Corner-0 preference was never tested | Independent code-reviewer subagent | Replaced with an only-center-taken board → expects 0 |
 | Phase 7 | DECISIONS.md A-14 claimed a Guid route constraint | Code correctly uses TryParseId; a route constraint would return a 404 without errorCode | spec-verifier traceability report | Corrected the decision text |
+| Phase 8 | Wrote README before I approved the outline; ran pkill on my running API | Skipped a human approval gate; side effect on my local environment | Claude disclosed both itself; I verified the README line by line | Reviewed the full file; restarted the API |
 ## Phase log
 <!-- Entries are appended below by /ai-workflow-log -->
 
@@ -476,3 +477,28 @@ Approved as proposed. Skip the index.html flash script – note it for Future im
 **Rejected AI suggestions:** index.html anti-flash script: out of scope tonight, listed as a future improvement.
 **Assumptions / trade-offs:** An extra beyond the brief, added only after every acceptance criterion was verified; design tokens make future theming a CSS-only change.
 **Verification:** `npm test -- --watch=false` → 11 test files, 62 tests passed · `npx ng build` → bundle generated, no errors or warnings.
+
+### Phase 8 – README — 2026-10-11 20:20
+**Goal:** Write the root README.md for the interview panel: run, test, API, AI workflow, decisions and limitations.
+**Prompts used:**
+```
+Write README.md at the repo root for the interview panel. Use exactly these sections, in this order:
+1 Project overview · 2 Tech stack (versions read from the project files: .NET 10, Angular 22, Vitest, xUnit) · 3 Features implemented · 4 How to run the backend locally · 5 How to run the frontend locally · 6 API endpoint summary (table built from the controllers, with status codes and errorCodes; link the .http file, Swagger UI at http://localhost:5080/swagger and /health) · 7 How to run tests (backend and frontend commands + current counts, and a requirement → test mapping summary) · 8 AI tools and prompt summary (summarise docs/AI_WORKFLOW.md and docs/prompts/PROMPTS.md and link them; mention the Claude Code setup: CLAUDE.md, path-scoped rules, skills, code-reviewer/spec-verifier subagents, test-lock hook; never invent prompts) · 9 Design decisions (from docs/DECISIONS.md and D-01: decision, why, trade-off – table) · 10 Clarifications and assumptions (state Undo Option A explicitly; link SPEC.md) · 11 Known limitations (in-memory state lost on restart, single global scoreboard, no game eviction and per-game locks never trimmed, 415-before-404 ordering, HTTP only, no auth, computer is beatable by design) · 12 Future improvements.
+Also add: a CI status badge for .github/workflows/ci.yml at the top; a "Quick start (2 terminals)" block; a repository structure tree; a troubleshooting note: if npm skips devDependencies (NODE_ENV=production), run `npm install --include=dev`; prerequisites (.NET SDK 10.0.400 via global.json, Node 24).
+Mention the dark theme (OS default + toggle) under Features, and the index.html anti-flash script under Future improvements.
+Only include commands you have verified in this repo. Tables and short bullets, about 200–250 lines.
+
+Context budget: keep this session lean. Read only the files you need. Show me a section outline first, then write the file.
+```
+**AI generated:**
+- New `README.md` (243 lines): the 12 requested sections in order, plus CI badge, Quick start (2 terminals), prerequisites, repository tree and the `npm install --include=dev` troubleshooting note.
+- Versions read from `global.json`, the `.csproj` files and `package.json`; the endpoint table built from `GamesController`, `ScoreboardController` and `ApiProblems`, including the framework 415 `UNSUPPORTED_MEDIA_TYPE` and 404 `NOT_FOUND` codes.
+- Test section with real counts (91 Core + 38 Api + 62 frontend = 191) and a table mapping the brief's 13 mandatory cases to requirement IDs (SPEC §8) and test classes (matched by test method names).
+- AI section summarising AI_WORKFLOW.md and the PROMPTS.md phases, with a table of the Claude Code setup; no prompts invented.
+- Design decisions table condensing ADR-00, D-01 and A-01…A-17 to decision / why / trade-off.
+- Process slips: wrote the file in the same turn as the outline instead of waiting for approval, and stopped the user's running API with `pkill -f TicTacToe.Api` while cleaning up its own verification run (both disclosed in the reply).
+**Human review:** Reviewed line by line: section 10 (Undo Option A stated explicitly), section 11 Known limitations (each item matches the code and DECISIONS.md), section 8 AI summary, the endpoint/errorCode table against the controllers, and the Quick start commands. Spot-checked two rows of the requirement → test mapping.
+**Manual changes:** Edited section 8 wording myself so the AI summary reads in my own voice. Ran a fresh-clone check from GitHub (clone → dotnet test → npm ci --include=dev → npm test → run both apps) to prove the README instructions work for a reviewer.
+**Rejected AI suggestions:** None in content. Noted two process slips: the AI wrote the file without waiting for my outline approval, and it stopped my running API with pkill – no harm done, I restarted it.
+**Assumptions / trade-offs:** None new; the 415-before-404 ordering and the in-memory limitations are documented in section 11.
+**Verification:** `dotnet test backend` → 91 + 38 passed · `npm test -- --watch=false` → 11 test files, 62 tests passed · `npx ng build` → bundle generated · curl against the running API → `/health` 200 `Healthy`, `/swagger` 200, `/openapi/v1.json` 200 · fresh-clone check by the owner (see Manual changes).
