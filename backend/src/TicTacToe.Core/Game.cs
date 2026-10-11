@@ -108,7 +108,8 @@ public sealed class Game
             return GameError.GameCompleted;
         }
 
-        // In VsComputer the computer owns O, so a human O move is never accepted (T-12).
+        // In VsComputer the computer owns O, so a human O move is never accepted (T-12). I-4 already makes the
+        // second clause redundant (it is always X's turn there); it is kept as defence in depth.
         if (player != CurrentPlayer || (Mode == GameMode.VsComputer && player == Player.O))
         {
             return GameError.NotYourTurn;

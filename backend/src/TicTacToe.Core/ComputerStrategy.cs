@@ -9,16 +9,16 @@ public static class ComputerStrategy
 
     /// <summary>Picks O's cell. Call only on an in-progress board, which always has a free cell.</summary>
     public static int ChooseCell(IReadOnlyList<Player?> board) =>
-        FirstEmpty(board, AllCells.Where(cell => CompletesLine(board, cell, Player.O)))
-        ?? FirstEmpty(board, AllCells.Where(cell => CompletesLine(board, cell, Player.X)))
+        FirstEmpty(board, AllCells.Where(cell => WouldCompleteLine(board, cell, Player.O)))
+        ?? FirstEmpty(board, AllCells.Where(cell => WouldCompleteLine(board, cell, Player.X)))
         ?? FirstEmpty(board, Center)
         ?? FirstEmpty(board, Corners)
         ?? FirstEmpty(board, AllCells)
         ?? throw new InvalidOperationException("The computer cannot move on a full board.");
 
-    /// <summary>True if playing <paramref name="cell"/> would give <paramref name="player"/> three in a line.</summary>
-    private static bool CompletesLine(IReadOnlyList<Player?> board, int cell, Player player) =>
-        WinningLines.All.Any(line =>
+    /// <summary>True if <paramref name="cell"/> is empty and playing it would give <paramref name="player"/> three in a line.</summary>
+    private static bool WouldCompleteLine(IReadOnlyList<Player?> board, int cell, Player player) =>
+        board[cell] is null && WinningLines.All.Any(line =>
             line.Contains(cell) && line.All(other => other == cell || board[other] == player));
 
     /// <summary>The first empty cell in the given order, or null if none is empty.</summary>

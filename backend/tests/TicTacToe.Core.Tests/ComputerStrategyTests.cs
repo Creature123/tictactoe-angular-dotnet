@@ -51,12 +51,12 @@ public sealed class ComputerStrategyTests
 
     [Fact]
     [Trait("Req", "MH-19")]
-    public void ChooseCell_CenterTaken_PlaysFirstCorner()
+    public void ChooseCell_CenterAndFirstCornerTaken_PlaysNextCorner()
     {
-        // §6-E4 ....X....: no win or block, center taken, so the first corner in order (0) decides.
-        var board = TwoPlayer((1, 1)).Board;
+        // §6-E4 O...X...X: no win or block, center and corner 0 taken, so the next corner (2) decides; "any free cell" would give 1.
+        var board = TwoPlayer((1, 1), (0, 0), (2, 2)).Board;
 
-        Assert.Equal(0, ComputerStrategy.ChooseCell(board));
+        Assert.Equal(2, ComputerStrategy.ChooseCell(board));
     }
 
     [Fact]

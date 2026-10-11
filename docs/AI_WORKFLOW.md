@@ -41,6 +41,7 @@ AI output, and my own review and changes. Each phase entry is appended at the en
 |-------|----------------------|------------------|-----------------|-----|
 | Phase 1 | SPEC tie-break for "block" didn't cover an X fork (two threats) | Computer behaviour would be non-deterministic and untestable in a fork | Reviewed §6 strategy against my own walk-through scenarios | Required "block the lowest-indexed cell" + example T2 |
 | Phase 2 | global.json was placed in backend/ | dotnet resolves global.json from the working directory upward; commands run from the repo root would ignore it and could pick the .NET 6 SDK | Claude flagged it after creating the file; I verified with `dotnet --version` from the root | Moved global.json to the repo root |
+| Phase 3 | SPEC §6 example E4 (....X....) used for the corner-rule test | "First free cell" also gives 0, so the test would pass with the corner rule deleted | AI self-critique, which I triaged | Replaced E4 with O...X...X → 2 and pointed MH-19 at it |
 ## Phase log
 <!-- Entries are appended below by /ai-workflow-log -->
 
@@ -192,3 +193,52 @@ Go ahead: write stubs + tests and confirm RED.
 **Rejected AI suggestions:** None. Accepted the three small deviations (GameError in A-10 order, T-06/T-07 traits, Move as sealed record) after review.
 **Assumptions / trade-offs:** Immutable Game allocates a new object per move (≤ 9 moves) – negligible – in exchange for race-free snapshots and domain-level enforcement of the computer rules.
 **Verification:** `dotnet build` of the stubs → 0 errors. `dotnet test backend` → Core.Tests: 71 failed, 0 passed, 0 skipped. All 71 failures are `System.NotImplementedException`; there were no compile errors or assertion failures. Api.Tests: 1 passed. Committed as `248720c`.
+
+### Phase 3b – Core implementation (GREEN) — 2026-10-11 18:42
+**Goal:** Make the Phase 3a domain tests pass, then have the AI critique its own implementation against SPEC §3, §4 and §6, and fix the gaps I approved.
+**Prompts used:**
+```text
+[prompt not available – see exported transcript]
+(GREEN implementation prompts for commit ce14459; the session was cleared before the review below.)
+```
+```text
+Without changing any code: review your implementation against @docs/SPEC.md sections 3, 4 and 6. List, ranked by risk: requirements that pass only because of the specific test data, duplicated logic, unclear names, and anything a senior reviewer would question. For each item, say what you would change.
+
+Context budget: keep this session lean.
+- Read only the files you need; reference SPEC sections by number instead of re-reading the whole file.
+- Don't paste full file contents or full test output back to me – show a diff summary and the pass/fail summary line only.
+- If a step needs a broad search or review, delegate it to a subagent so its output doesn't fill this context.
+- Stop and tell me if you think the context is getting full before the task is done.
+```
+```text
+Approved triage:
+- Do 1, 2, 3, 5 as test additions (do not modify existing tests). For each new test, state in one line which wrong implementation it would catch.
+  - Item 1: concurrency test (20 parallel identical winning moves → exactly one success, score (1,0,0)) + a small Scoreboard unit test.
+- Item 4: update docs/SPEC.md §6 – replace E4 with X1,1 O0,0 X2,2 → board O...X...X → expected 2, and point MH-19 at it; update the E4-based test to the new board.
+- Item 6: keep the VsComputer O guard; add a comment that I-4 makes it redundant and it is kept as defence in depth.
+- Item 8: rename CompletesLine → WouldCompleteLine and add the empty-cell check.
+- Defer 7, 9, 10: list them as one-liners I can paste into README "Known limitations / Future improvements". No code changes for them.
+Run dotnet test backend and give the summary line only.
+```
+**AI generated:**
+- GREEN implementation (commit `ce14459`):
+  - `Game` is immutable, and the move list is the only stored state. Board and winning cells are calculated once in the private constructor; status, winner and `CanUndo` are derived from them.
+  - The VsComputer reply happens inside `Game.Play` (D-01). `Game.Validate` checks the rules in A-10 order.
+  - `ComputerStrategy.ChooseCell` applies win > block > center > corner > first free cell.
+  - `GameService.Mutate` runs read → change → score on the InProgress → Won/Draw transition → store, under a per-game `Lock`.
+  - `Scoreboard` has its own lock.
+- Self-critique (read-only): a ranked list of 11 findings. No place where code behaviour disagrees with the SPEC. It found tests that would still pass with wrong code: the lock and score-once (I-6/I-7), the error order (A-10, only one pair tested), the VsComputer draw (T-08, untested), and the 1-4-7 line. It also found that SPEC §6-E4 couldn't fail, plus redundant guards, the `GameResult` design, the strategy line check relying on its caller, the board size written out in several places, and the singleton requirement for the locks.
+- Tests added (17 in total; no existing test modified):
+  - `GameTests.cs`: 3 combined-violation tests for the error order, an 8-case Theory over every winning line, and a VsComputer draw on X's 9th move with no computer reply.
+  - `GameServiceTests.cs`: VsComputer draw scoring, and 20 dedicated threads making the same winning move behind a shared gate (no `Thread.Sleep`).
+  - New `ScoreboardTests.cs`: which count each result goes to, rejecting an unfinished game, and reset.
+- Production edits:
+  - `ComputerStrategy.CompletesLine` renamed to `WouldCompleteLine`, which now checks the cell is empty itself.
+  - A defence-in-depth comment on the VsComputer O guard in `Game.Validate`.
+- `docs/SPEC.md`: §6 E4 is now `X1,1 O0,0 X2,2` → `O...X...X` → 2, and MH-19 expects index 2.
+- Not done: "update the E4-based test to the new board". It would duplicate `ChooseCell_CornerZeroTaken_PlaysNextCornerInOrder` and lose the only check that corner 0 is tried before corner 2. The AI stopped and proposed a comments-only re-label instead (decision open).
+**Human review:** Reviewed line by line: Game.cs (derived board/status/current player), ComputerStrategy.ChooseCell (5-step priority), GameService.MakeMove (lock → Play → score → store), WinningLines.
+**Manual changes:** Ran an AI self-critique and triaged its 11 findings myself: fixed 1 (concurrency + score-once test), 2 (error-order Theory), 3 (VsComputer draw), 5 (all 8 winning lines) and 8 (WouldCompleteLine empty-cell check); corrected SPEC §6 E4, which couldn't fail; kept guard 6 with a defence-in-depth comment; deferred 7, 9 and 10 to Known limitations. Accepted that the computer reply lives in Game.Play (D-01 + locked test) rather than in GameService as my prompt said.
+**Rejected AI suggestions:** 7, 9 and 10 for now – style/refactor only, not worth the time risk today.
+**Assumptions / trade-offs:** GameService, repository and scoreboard must be singletons because the per-game locks live in GameService (to be enforced in Phase 4).
+**Verification:** `dotnet test backend` at `ce14459` → Core.Tests 71 passed, 0 failed; Api.Tests 1 passed. After the hardening → Core.Tests 88 passed, 0 failed, 0 skipped; Api.Tests 1 passed. Checked by breaking the code: with the per-game lock removed temporarily, the concurrency test failed 5 runs out of 5 (lock restored, `GameService.cs` unchanged afterwards).

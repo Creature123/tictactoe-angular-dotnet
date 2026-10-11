@@ -189,6 +189,43 @@ public sealed class GameTests
         Assert.Equal(GameError.GameCompleted, result.Error);
     }
 
+    [Fact]
+    [Trait("Req", "A-10")]
+    public void Play_OutOfBoundsOnCompletedGame_ReturnsOutOfBounds()
+    {
+        // X wins the top row; (3,0) is both off the board and on a finished board. OUT_OF_BOUNDS is checked first.
+        var game = TwoPlayer((0, 0), (1, 0), (0, 1), (1, 1), (0, 2));
+
+        var result = game.Play(Player.O, new Position(3, 0));
+
+        Assert.Equal(GameError.OutOfBounds, result.Error);
+    }
+
+    [Fact]
+    [Trait("Req", "A-10")]
+    public void Play_WrongPlayerOnOccupiedCell_ReturnsNotYourTurn()
+    {
+        // X to move; O plays (0,0), which X already holds. NOT_YOUR_TURN is checked before CELL_OCCUPIED.
+        var game = TwoPlayer((0, 0), (1, 1));
+
+        var result = game.Play(Player.O, new Position(0, 0));
+
+        Assert.Equal(GameError.NotYourTurn, result.Error);
+    }
+
+    [Fact]
+    [Trait("Req", "A-10")]
+    [Trait("Req", "T-12")]
+    public void Play_OInComputerModeOnOccupiedCell_ReturnsNotYourTurn()
+    {
+        // After X(0,0) the computer holds the center; a human O move on it is NOT_YOUR_TURN, not CELL_OCCUPIED.
+        var game = VsComputer((0, 0));
+
+        var result = game.Play(Player.O, new Position(1, 1));
+
+        Assert.Equal(GameError.NotYourTurn, result.Error);
+    }
+
     // ---- Wins ----------------------------------------------------------------------------------
 
     [Fact]
@@ -267,6 +304,32 @@ public sealed class GameTests
 
         Assert.Equal(GameStatus.Won, after.Status);
         Assert.Equal([0, 2, 4, 6, 8], after.WinningCells);
+    }
+
+    [Theory]
+    [Trait("Req", "FR-09")]
+    [Trait("Req", "FR-10")]
+    [Trait("Req", "FR-11")]
+    [InlineData(0, 1, 2)]
+    [InlineData(3, 4, 5)]
+    [InlineData(6, 7, 8)]
+    [InlineData(0, 3, 6)]
+    [InlineData(1, 4, 7)]
+    [InlineData(2, 5, 8)]
+    [InlineData(0, 4, 8)]
+    [InlineData(2, 4, 6)]
+    public void Play_XCompletesAnyLine_XWinsWithThatLine(int a, int b, int c)
+    {
+        // X plays a, b, c; O plays the two lowest cells off the line, which can never give O a line.
+        int[] line = [a, b, c];
+        var o = Enumerable.Range(0, 9).Where(cell => !line.Contains(cell)).Take(2).ToArray();
+        var game = TwoPlayer(Cell(a), Cell(o[0]), Cell(b), Cell(o[1]));
+
+        var after = game.Play(Player.X, Position.FromIndex(c)).Ok();
+
+        Assert.Equal(GameStatus.Won, after.Status);
+        Assert.Equal(Player.X, after.Winner);
+        Assert.Equal(line, after.WinningCells);
     }
 
     // ---- Draw ----------------------------------------------------------------------------------
@@ -454,6 +517,22 @@ public sealed class GameTests
     }
 
     [Fact]
+    [Trait("Req", "MH-15")]
+    [Trait("Req", "T-08")]
+    public void Play_ComputerModeXFillsBoard_DrawAndComputerDoesNotReply()
+    {
+        // X4 → O0 (corner), X8 → O2 (corner), X1 → O7 (block), X3 → O5 (block). X6 is move 9 with no line.
+        var game = VsComputer((1, 1), (2, 2), (0, 1), (1, 0));
+
+        var after = game.Play(Player.X, new Position(2, 0)).Ok();
+
+        Assert.Equal("OXOXXOXOX", after.Board.AsText());
+        Assert.Equal(GameStatus.Draw, after.Status);
+        Assert.Equal(9, after.Moves.Count);
+        Assert.Equal(Player.X, after.Moves[^1].Player);
+    }
+
+    [Fact]
     [Trait("Req", "MH-04")]
     public void Undo_ComputerModeAfterOneRound_RemovesBothMovesAndXToMove()
     {
@@ -482,4 +561,9 @@ public sealed class GameTests
         Assert.Equal(2, after.Moves.Count);
         Assert.Equal(GameStatus.InProgress, after.Status);
     }
+
+    // ---- Helpers -------------------------------------------------------------------------------
+
+    /// <summary>The (row, col) of a cell index.</summary>
+    private static (int Row, int Col) Cell(int index) => (index / 3, index % 3);
 }

@@ -58,7 +58,7 @@ Each criterion is written to be tested by a single test. Positions in criteria a
 | MH-16 | MH§4 | Priority 1: O wins if it can | Given board §6-E1, When the computer moves, Then it plays index 5 (it wins, even though X also threatens) |
 | MH-17 | MH§4 | Priority 2: block X | Given board §6-E2, When the computer moves, Then it plays index 2 |
 | MH-18 | MH§4 | Priority 3: center | Given board §6-E3, When the computer moves, Then it plays index 4 |
-| MH-19 | MH§4 | Priority 4: corner | Given board §6-E4, When the computer moves, Then it plays index 0 |
+| MH-19 | MH§4 | Priority 4: corner | Given board §6-E4, When the computer moves, Then it plays index 2 |
 | MH-20 | MH§4 | Priority 5: any free cell | Given board §6-E5, When the computer moves, Then it plays index 3 |
 | MH-21 | MH§4 | The tie-break is deterministic (§6) | Given boards §6-T1 / §6-T2, When the computer moves, Then it plays index 5 / 6 |
 
@@ -218,7 +218,7 @@ Example boards (moves in play order, `row,col`; board shown as indices 0–8, `.
 | E1 | X0,0 O1,0 X0,1 O1,1 X2,2 | `XX.OO...X` | 5 | win beats block (X threatens 2) |
 | E2 | X0,0 O1,0 X0,1 | `XX.O.....` | 2 | block |
 | E3 | X0,0 | `X........` | 4 | center |
-| E4 | X1,1 | `....X....` | 0 | corner order |
+| E4 | X1,1 O0,0 X2,2 | `O...X...X` | 2 | corner order (0 taken → 2; "any free cell" would give 1) |
 | E5 | X0,0 O0,1 X0,2 O2,0 X1,1 O2,2 X2,1 | `XOX.X.OXO` | 3 | any free cell (lowest) |
 | T1 | X0,0 O0,1 X0,2 O1,0 X2,0 O1,1 X2,2 | `XOXOO.X.X` | 5 | two winning cells {5,7} → lowest |
 | T2 | X0,0 O0,1 X0,2 O1,0 X1,1 | `XOXOX....` | 6 | two blocking cells {6,8} → lowest |

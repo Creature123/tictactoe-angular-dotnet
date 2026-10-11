@@ -134,6 +134,50 @@ public sealed class GameServiceTests
     }
 
     [Fact]
+    [Trait("Req", "FR-17")]
+    [Trait("Req", "T-08")]
+    public void MakeMove_ComputerModeDraw_IncrementsDrawsOnce()
+    {
+        var id = _service.CreateGame(GameMode.VsComputer).Id;
+
+        // X4 → O0, X8 → O2, X1 → O7, X3 → O5, X6 fills the board with no line.
+        var game = PlayVsComputer(id, (1, 1), (2, 2), (0, 1), (1, 0), (2, 0));
+
+        Assert.Equal(GameStatus.Draw, game.Status);
+        Assert.Equal(new ScoreSnapshot(0, 0, 1), _service.GetScoreboard());
+    }
+
+    [Fact]
+    [Trait("Req", "I-7")]
+    [Trait("Req", "MH-09")]
+    public async Task MakeMove_TwentyParallelIdenticalWinningMoves_ExactlyOneSucceedsAndScoresOnce()
+    {
+        var id = _service.CreateGame(GameMode.TwoPlayer).Id;
+        // X to move with (0,2) completing the top row.
+        PlayTwoPlayer(id, (0, 0), (1, 0), (0, 1), (1, 1));
+        using var start = new ManualResetEventSlim();
+
+        // Dedicated threads all block on one gate, then race for the same game at once.
+        var requests = Enumerable.Range(0, 20)
+            .Select(_ => Task.Factory.StartNew(
+                () =>
+                {
+                    start.Wait();
+                    return _service.MakeMove(id, Player.X, new Position(0, 2));
+                },
+                TaskCreationOptions.LongRunning))
+            .ToArray();
+        start.Set();
+        var results = await Task.WhenAll(requests);
+
+        Assert.Single(results, result => result.Error is null);
+        Assert.All(results.Where(result => result.Error is not null),
+            result => Assert.Equal(GameError.GameCompleted, result.Error));
+        Assert.Equal(new ScoreSnapshot(1, 0, 0), _service.GetScoreboard());
+        Assert.Equal(5, _service.GetGame(id)?.Moves.Count);
+    }
+
+    [Fact]
     [Trait("Req", "MH-09")]
     public void MakeMove_AfterWin_RejectedAndScoreboardUnchanged()
     {
