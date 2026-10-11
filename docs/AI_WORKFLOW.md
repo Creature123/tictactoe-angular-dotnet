@@ -44,6 +44,7 @@ AI output, and my own review and changes. Each phase entry is appended at the en
 | Phase 3 | SPEC §6 example E4 (....X....) used for the corner-rule test | "First free cell" also gives 0, so the test would pass with the corner rule deleted | AI self-critique, which I triaged | Replaced E4 with O...X...X → 2 and pointed MH-19 at it |
 | Phase 4 | Class-level [Produces("application/json")] on the controller | Overrode application/problem+json on error responses – 13 tests failed | Integration tests asserting the problem+json content type | Removed the attribute |
 | Phase 4 | [property: Required] on positional record DTOs | MVC rejects validation attributes on positional-record properties | Claude flagged it after the first build, before any test run | Moved [Required] to the constructor parameters |
+| Phase 5a | ng new reported a successful install | NODE_ENV=production in the shell made npm skip devDependencies; @angular/build, vitest and prettier were missing | Claude noticed when the first build failed | npm install --include=dev; README note |
 ## Phase log
 <!-- Entries are appended below by /ai-workflow-log -->
 
@@ -301,3 +302,35 @@ Approved as proposed: Swashbuckle.AspNetCore.SwaggerUI 10.2.3, keep the redirect
 **Rejected AI suggestions:** None rejected; I accepted the AI's pushback that logging in Run would miss rejected moves – ToActionResult is the correct single place.
 **Assumptions / trade-offs:** Fresh WebApplicationFactory per test = full isolation of the singleton scoreboard at the cost of slower tests (fine at 36 tests). AddTicTacToe lives in the Api project to avoid adding a DI package to Core.
 **Verification:** `dotnet test backend` → first run: Api.Tests 13 failed (`[Produces]` overriding problem+json); after the fix → Core.Tests 88 passed, Api.Tests 33 passed. After health check + logging → Api.Tests 34 passed. After Swagger UI → Core.Tests 88 passed, Api.Tests 36 passed, 0 failed, 0 skipped.
+
+### Phase 5a – Angular scaffold — 2026-10-11 19:11
+**Goal:** Scaffold the Angular app in ./frontend with an /api dev proxy, Prettier and no placeholder page.
+**Prompts used:**
+```
+Phase 5a – Angular scaffold. Use the angular-new-app skill.
+
+Create the Angular app in ./frontend:
+- name tictactoe-ui; use the installed Angular CLI; standalone; SCSS; no SSR; no routing; keep the CLI defaults for zoneless and the test runner.
+- flags: --skip-git (we are already inside a git repo) and --ai-config=none (this repo already has CLAUDE.md and rules; I don't want a second, conflicting instruction file).
+- add proxy.conf.json forwarding /api to http://localhost:5080 and wire it into the serve target, so `npm start` uses it.
+- add Prettier as a dev dependency (the format hook uses it); remove the placeholder welcome page.
+Then run `npx ng build` and `npm test -- --watch=false` and show me the results.
+```
+```
+Context budget: keep this session lean.
+- Read only the files you need; reference SPEC sections by number instead of re-reading the whole file.
+- Don't paste full file contents or full test output back to me – show a diff summary and the pass/fail summary line only.
+- If a step needs a broad search or review, delegate it to a subagent so its output doesn't fill this context.
+- Stop and tell me if you think the context is getting full before the task is done.
+```
+**AI generated:**
+- `ng new tictactoe-ui --directory=frontend --style=scss --ssr=false --routing=false --skip-git --ai-config=none --interactive=false` (Angular CLI 22.2.2): standalone, zoneless, Vitest + jsdom (CLI defaults).
+- `frontend/proxy.conf.json`: `/api` → `http://localhost:5080` (`secure: false`, `changeOrigin: true`), wired via `serve.options.proxyConfig` in `angular.json` so `npm start` uses it.
+- Prettier: the CLI already adds `prettier ^3.8.1` + `.prettierrc`, so no new dependency; ran `prettier --write` on `src/` and the proxy file (4 generated files were unformatted).
+- Replaced the ~20 KB welcome page in `app.html` with `<main><h1>Tic Tac Toe</h1></main>`; removed the unused `title` signal from `app.ts`; `app.spec.ts` keeps the same assertion with the new heading text; tidied a stray blank line in `app.config.ts`.
+- Diagnosed the failed first build: `NODE_ENV=production` made npm omit devDependencies; fixed with `npm install --include=dev` without changing the shell environment.
+**Human review:** Reviewed proxy.conf.json, the serve.options.proxyConfig wiring in angular.json, and the app.spec.ts change (same assertion, new heading text).
+**Manual changes:** None.
+**Rejected AI suggestions:** None.
+**Assumptions / trade-offs:** Kept the CLI defaults (standalone, zoneless, Vitest). Document the NODE_ENV=production / `npm install --include=dev` workaround in the README. Note: frontend/ was committed as part of the "docs: log phase 4 AI workflow" commit (8a8d851) because both tabs share one working tree.
+**Verification:** `npx ng build` → first run failed (`Could not find the '@angular/build:application' builder's node package` – devDependencies not installed); after `npm install --include=dev` → bundle generated, initial total 93.59 kB, no warnings. `npm test -- --watch=false` → 1 test file, 2 tests passed.
