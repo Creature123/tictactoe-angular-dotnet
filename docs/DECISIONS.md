@@ -113,3 +113,11 @@ The `.claude/rules` files and CLAUDE.md fix the HTTP status codes, error codes a
 - **Options considered:** (a) Render the reply as soon as the response arrives. (b) Add an artificial delay or animation.
 - **Decision:** (a). Both moves come back in one response (atomic `POST /moves`, `CLAUDE.md`).
 - **Consequences:** No timers in the UI and nothing extra to test. Both moves appear together.
+
+---
+
+## D-01 — Immutable `Game`; the computer reply lives in the domain
+- **Context:** CLAUDE.md requires the move list to be the single source of truth and the computer reply to be atomic with X's move. The rules require each game's mutation (move + reply + score) to be atomic under a per-game lock, and SPEC T-12 rejects any human `O` move in VsComputer.
+- **Options considered:** (a) Mutable `Game`; `GameService` plays X, asks `ComputerStrategy` for a cell and plays O. (b) Immutable `Game`; `Play` returns a new `Game` and, in VsComputer, appends the computer's reply itself.
+- **Decision:** (b).
+- **Consequences:** "Computer never moves after completion" and "human can't play O" are both enforced and unit-tested in Core, with no service involved. A returned `Game` is a snapshot, so the API can map it to a DTO outside the lock without races. `GameService` still holds the per-game lock across read → `Play` → record score → store, so two concurrent moves can't both build on the same version. Each move allocates a new `Game` and move list (at most 9 entries), which is negligible.

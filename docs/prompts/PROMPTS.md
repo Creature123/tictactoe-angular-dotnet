@@ -100,6 +100,12 @@ Rules:
 - Run `dotnet test backend` and confirm the tests fail with NotImplementedException, not compile errors.
 
 Before writing, show me the test names grouped by requirement ID.
+
+Context budget: keep this session lean.
+- Read only the files you need; reference SPEC sections by number instead of re-reading the whole file.
+- Don't paste full file contents or full test output back to me – show a diff summary and the pass/fail summary line only.
+- If a step needs a broad search or review, delegate it to a subagent so its output doesn't fill this context.
+- Stop and tell me if you think the context is getting full before the task is done.
 ```
 
 Commit the failing tests, then lock them: `touch .claude/tests.lock`

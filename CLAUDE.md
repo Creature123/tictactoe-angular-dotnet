@@ -28,8 +28,7 @@ If code and SPEC disagree, stop and tell me. Do not silently pick one.
 - **The ordered move list is the single source of truth.** Board, current player, status, winner and
   winning cells are *derived* from it. Undo = remove moves + re-derive. No parallel mutable fields that can drift.
 - Current player is derived: X moves first; X when the move count is even, O when it is odd.
-- Computer Mode: human is X, computer is O. The computer replies inside the same `POST /moves` request
-  (atomic), and never moves when the game is already complete.
+- Computer Mode: human is X, computer is O. `Game.Play` appends X's move and the computer's reply in one call (atomic), and never replies once the game is complete; `GameService` only loads, stores and scores the game under its per-game lock (D-01).
 - Computer priority is exact: win > block > center > corner (0, 2, 6, 8 order) > first free cell. Deterministic.
 - Scoreboard is updated exactly once, on the InProgress → Won/Draw transition. Reset Game never touches it.
 - Undo after completion is disabled (Option A, see DECISIONS.md). The API returns `canUndo`; the UI never computes it.
