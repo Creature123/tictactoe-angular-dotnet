@@ -103,3 +103,38 @@ Finish with a bullet summary of what changed in SPEC.md.
 **Rejected AI suggestions:** None in this phase. All 17 recommendations matched my own reasoning; I wrote a one-line justification for each.
 **Assumptions / trade-offs:** Single global scoreboard and no game eviction (lost on restart) – accepted for a local single-user app, listed as known limitations.
 **Verification:** Docs-only phase, no code yet, so no build or tests run. Manual review of SPEC against the brief and the rules file (see Human review). Committed as `054c9b3`.
+
+### Phase 2 – Backend skeleton — 2026-10-11 12:14
+**Goal:** Scaffold the .NET 10 solution (Core, Api, two xUnit test projects) with no game logic, building and testing green.
+**Prompts used:**
+```
+Read @docs/SPEC.md. Scaffold the backend skeleton only – no game logic yet.
+
+- backend/ with a solution containing src/TicTacToe.Core (classlib), src/TicTacToe.Api (ASP.NET Core Web API using controllers, not minimal APIs), tests/TicTacToe.Core.Tests and tests/TicTacToe.Api.Tests (xUnit).
+- Target framework: net10.0 (first confirm with `dotnet --list-sdks` that a 10.0 SDK is installed; stop and tell me if it isn't).
+- backend/Directory.Build.props: Nullable enable, ImplicitUsings enable, TreatWarningsAsErrors true, LangVersion latest.
+- References: Api → Core; Core.Tests → Core; Api.Tests → Api, plus Microsoft.AspNetCore.Mvc.Testing.
+- Api: launchSettings with a single "http" profile on http://localhost:5080; remove the WeatherForecast sample; add `public partial class Program {}` for WebApplicationFactory.
+- Use the dotnet CLI (dotnet new / sln / add reference), not hand-written project files.
+
+Show me the plan first. After I approve, run `dotnet build backend` and `dotnet test backend` and show me the summary.
+```
+```
+Add backend/global.json pinning the SDK to 10.0.400 with "rollForward": "latestFeature", so anyone cloning the repo builds with .NET 10 even if older SDKs are installed. Then re-run dotnet build backend and dotnet test backend.
+```
+```
+Move global.json from backend/ to the repo root so it applies when commands run from the root. Then run `dotnet --version` from the repo root to confirm it shows 10.0.400, and re-run dotnet build backend and dotnet test backend.
+```
+**AI generated:**
+- Checked `dotnet --list-sdks` (6.0.403 and 10.0.400 installed) and presented a plan in plan mode before scaffolding.
+- `backend/TicTacToe.slnx` (the .NET 10 default format) with `/src/` and `/tests/` solution folders; `TicTacToe.Core` (classlib), `TicTacToe.Api` (`webapi --use-controllers --no-https`), `TicTacToe.Core.Tests` and `TicTacToe.Api.Tests` (xUnit), all created with the dotnet CLI.
+- `backend/Directory.Build.props` with Nullable, ImplicitUsings, TreatWarningsAsErrors and LangVersion latest; removed the duplicate settings from each `.csproj`.
+- References Api → Core, Core.Tests → Core, Api.Tests → Api, plus `Microsoft.AspNetCore.Mvc.Testing` 10.0.11.
+- Api: deleted the WeatherForecast sample (and `Class1.cs` from Core); `Program.cs` keeps controllers and Development-only OpenAPI, adds `public partial class Program { }`, and drops `UseAuthorization` (out of plan, disclosed); a single `http` profile on :5080; `TicTacToe.Api.http` points at :5080.
+- Deleted the template `UnitTest1.cs` files; added `HostSmokeTests.Host_Starts_ServesOpenApiDocument` (`WebApplicationFactory<Program>`, `GET /openapi/v1.json` → 200, `[Trait("Req","NFR-02")]`).
+- `global.json` (SDK 10.0.400, `rollForward: latestFeature`) via `dotnet new globaljson`, first in `backend/`; flagged that the CLI resolves it from the working directory upward, then moved it to the repo root.
+**Human review:** Reviewed line by line: Program.cs (every line explained to myself), the four .csproj files (confirmed Core has no ASP.NET reference), Directory.Build.props, launchSettings.json (port 5080), and the HostSmokeTests smoke test.
+**Manual changes:** Requested global.json SDK pinning because .NET 6.0.403 is also installed on my machine – reviewers must get a reproducible .NET 10 build. When Claude pointed out global.json resolves from the working directory upward, I verified with `dotnet --version` from the root and had it moved to the repo root. Logged in the AI-mistakes table.
+**Rejected AI suggestions:** None. I accepted two out-of-plan changes after review: removing UseAuthorization (no auth in scope – no dead middleware) and the host smoke test (cheap proof the API starts).
+**Assumptions / trade-offs:** .slnx solution format (the .NET 10 default; needs SDK 10 to open, acceptable since global.json pins it). HTTP-only on :5080 with no HTTPS redirect – fine for a local-only exercise, listed as a known limitation.
+**Verification:** `dotnet --version` (repo root) → 10.0.400. `dotnet build backend` → Build succeeded, 0 warnings, 0 errors. `dotnet test backend` → 1 passed, 0 failed, 0 skipped (Api.Tests); Core.Tests has no tests yet. Committed as `82e999f`.
