@@ -371,3 +371,42 @@ Approved. Go ahead, run npm test -- --watch=false and npx ng build, summary line
 **Rejected AI suggestions:** None.
 **Assumptions / trade-offs:** Store tests use the real GameApiService + HttpTestingController instead of mocks, so the actual HTTP contract is exercised. Note: the path-scoped testing rule made Claude rename tests to it('should …') and split a combined test – rules enforcing standards without me intervening.
 **Verification:** `npm test -- --watch=false` → 3 test files, 24 tests passed. `npx ng build` → bundle generated, no errors or warnings.
+
+### Phase 6 – Angular UI — 2026-10-11 19:30
+**Goal:** Build the Angular UI (GamePage container + presentational components) per FE-01…FE-09, FR-03/06/12/16 and MH-01, with component tests.
+**Prompts used:**
+```
+Phase 6 – UI. Use the angular-developer skill. Build the UI per the FE requirements in @docs/SPEC.md (FE-01…FE-09, FR-03/06/12/16, MH-01).
+
+- GamePage (src/app/game/game-page): the only container; injects GameStore; starts a TwoPlayer game on init (A-16). Render it from app.html.
+- Presentational components (signal inputs/outputs only, no services, OnPush):
+  - ModeSelector – Two Player / Play vs Computer; switching mode calls newGame(mode) (A-04)
+  - Board – 3×3 CSS grid of <button>s; inputs board, winningCells, disabled; output cellSelected(index). A cell is disabled when occupied, game over or pending. aria-label "Row r, Column c, X|O|empty" (1-based). Winning cells get class `winning`.
+  - GameStatus – "Player X's turn" / winner / draw message from store.statusMessage, plus the current mode label
+  - MoveHistory – table Move | Player | Position, "Row r, Column c" 1-based; empty-state text when no moves
+  - Scoreboard – X wins / O wins / Draws, plus a Reset Scoreboard button
+  - GameControls – Reset Game and Undo Last Move (Undo disabled when !canUndo or pending)
+- A dismissible error banner bound to store.error / clearError() (FE-07).
+- GamePage converts cellSelected(index) to play(row, col) – index→row/col is presentation mapping, not a game rule.
+- Styling: plain SCSS, CSS grid; board on the left, status/controls/scoreboard/history on the right; clean, modern look (large square cells, clear X/O colours, visible winning highlight, focus outlines); usable 1024–1920px, stacks below ~900px. No UI library.
+
+Component tests: Board renders 9 buttons, emits only for enabled cells, applies `winning`; GameStatus shows winner and draw messages; GameControls disables Undo when canUndo is false; MoveHistory renders 1-based positions; GamePage calls newGame('TwoPlayer') on init.
+Run `npm test -- --watch=false` and `npx ng build`, summary lines only.
+
+Context budget: keep this session lean.
+- Read only the files you need; reference SPEC sections by number instead of re-reading the whole file.
+- Don't paste full file contents or full test output back to me – show a diff summary and the pass/fail summary line only.
+- If a step needs a broad search or review, delegate it to a subagent so its output doesn't fill this context.
+- Stop and tell me if you think the context is getting full before the task is done.
+```
+**AI generated:**
+- Plan written in plan mode and approved before coding.
+- New components under `frontend/src/app/game/` (each `.ts` + `.html` + `.scss`): `game-page`, `board`, `mode-selector`, `game-status`, `game-controls`, `move-history`, `scoreboard`; plus `mode-labels.ts` (shared mode display names).
+- Specs: `board.spec.ts` (6), `game-status.spec.ts` (4), `game-controls.spec.ts` (3), `move-history.spec.ts` (2), `game-page.spec.ts` (3: init → `newGame('TwoPlayer')`, cell 5 → `play(1, 2)`, error banner + dismiss).
+- Changed: `app.ts`/`app.html` render `<app-game-page />`; `app.scss` page layout; `styles.scss` design tokens + `.card`/`.btn`; `app.spec.ts` adds `provideHttpClient()` + `provideHttpClientTesting()` (existing tests unchanged).
+- Key choices: GamePage is the only component that injects GameStore; the rest are OnPush with signal inputs/outputs. Index→row/col mapping lives in GamePage. Board disabled = `isGameOver() || pending()`; Undo enabled only when the API's `canUndo` is true and nothing is pending. Mode selector rendered outside the loaded-state block so it works as a retry if the first `newGame` fails. Scoreboard model imported as `ScoreboardCounts` to avoid a name clash with the component. Zoneless test pattern (setInput → `await whenStable()` → assert); GameStore stubbed with signals + `vi.fn()` in the GamePage spec.
+**Human review:** Reviewed GamePage (index→row/col is presentation only), Board disabled/winning logic, error banner; ran a manual browser walk-through of every acceptance criterion – Two Player win + highlight, draw, undo in both modes, computer center/block, Reset Game, Reset Scoreboard, move history, laptop layout.
+**Manual changes:** None to the code.
+**Rejected AI suggestions:** None. Accepted extras: mode selector usable before the first game loads (retry if API down), all action buttons disabled while pending.
+**Assumptions / trade-offs:** Status text "X's turn" kept as in SPEC FR-06 rather than "Player X's turn" from my prompt – SPEC wins.
+**Verification:** `npm test -- --watch=false` → 8 test files, 42 tests passed. `npx ng build` → bundle generated (initial total 160.39 kB), no errors or warnings.
