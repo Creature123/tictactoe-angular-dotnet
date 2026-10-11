@@ -45,6 +45,6 @@
   &.winning {
     border-color: var(--color-win-border);
     background: var(--color-win-bg);
-    box-shadow: 0 0 0 3px rgb(245 158 11 / 35%);
+    box-shadow: 0 0 0 3px var(--color-win-ring);
   }
 }

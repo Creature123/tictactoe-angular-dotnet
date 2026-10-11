@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { GamePage } from './game/game-page/game-page';
+import { ThemeService } from './theme/theme.service';
 
 @Component({
   imports: [GamePage],
@@ -7,4 +8,6 @@ import { GamePage } from './game/game-page/game-page';
   styleUrl: './app.scss',
   templateUrl: './app.html',
 })
-export class App {}
+export class App {
+  protected readonly theme = inject(ThemeService);
+}

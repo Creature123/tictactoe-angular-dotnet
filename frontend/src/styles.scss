@@ -1,5 +1,7 @@
 // Design tokens and a few shared utilities (.card, .btn). Component styles live next to each component.
+// Components use only these tokens, so the dark theme is just a second set of values.
 :root {
+  color-scheme: light;
   --color-bg: #f4f6fb;
   --color-surface: #ffffff;
   --color-text: #1f2937;
@@ -7,14 +9,51 @@
   --color-border: #e2e8f0;
   --color-accent: #4f46e5;
   --color-accent-soft: #eef2ff;
+  --color-accent-hover: #4338ca;
+  --color-on-accent: #fff;
   --color-x: #2563eb;
   --color-o: #db2777;
   --color-win-bg: #fef3c7;
   --color-win-border: #f59e0b;
+  --color-win-ring: rgb(245 158 11 / 35%);
   --color-danger: #b91c1c;
   --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
   --radius: 12px;
   --shadow: 0 1px 3px rgb(15 23 42 / 8%), 0 4px 12px rgb(15 23 42 / 6%);
+}
+
+@mixin dark-tokens {
+  color-scheme: dark;
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-text: #e5e7eb;
+  --color-muted: #9ca3af;
+  --color-border: #475569;
+  --color-accent: #818cf8;
+  --color-accent-soft: #312e81;
+  --color-accent-hover: #a5b4fc;
+  --color-on-accent: #0f172a;
+  --color-x: #60a5fa;
+  --color-o: #f472b6;
+  --color-win-bg: #422006;
+  --color-win-border: #fbbf24;
+  --color-win-ring: rgb(251 191 36 / 45%);
+  --color-danger: #fca5a5;
+  --color-danger-bg: #450a0a;
+  --color-danger-border: #7f1d1d;
+  --shadow: 0 1px 3px rgb(0 0 0 / 40%), 0 4px 12px rgb(0 0 0 / 30%);
+}
+
+// Follow the OS unless the user picked light explicitly; an explicit dark choice always applies.
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark-tokens;
+  }
+}
+
+:root[data-theme='dark'] {
+  @include dark-tokens;
 }
 
 *,
@@ -83,9 +122,9 @@ button {
 .btn-primary {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
 
   &:hover:not(:disabled) {
-    background: #4338ca;
+    background: var(--color-accent-hover);
   }
 }

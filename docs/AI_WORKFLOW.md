@@ -45,6 +45,8 @@ AI output, and my own review and changes. Each phase entry is appended at the en
 | Phase 4 | Class-level [Produces("application/json")] on the controller | Overrode application/problem+json on error responses – 13 tests failed | Integration tests asserting the problem+json content type | Removed the attribute |
 | Phase 4 | [property: Required] on positional record DTOs | MVC rejects validation attributes on positional-record properties | Claude flagged it after the first build, before any test run | Moved [Required] to the constructor parameters |
 | Phase 5a | ng new reported a successful install | NODE_ENV=production in the shell made npm skip devDependencies; @angular/build, vitest and prettier were missing | Claude noticed when the first build failed | npm install --include=dev; README note |
+| Phase 7 | Two MH-19 tests with the same board and expectation | Corner-0 preference was never tested | Independent code-reviewer subagent | Replaced with an only-center-taken board → expects 0 |
+| Phase 7 | DECISIONS.md A-14 claimed a Guid route constraint | Code correctly uses TryParseId; a route constraint would return a 404 without errorCode | spec-verifier traceability report | Corrected the decision text |
 ## Phase log
 <!-- Entries are appended below by /ai-workflow-log -->
 
@@ -410,3 +412,35 @@ Context budget: keep this session lean.
 **Rejected AI suggestions:** None. Accepted extras: mode selector usable before the first game loads (retry if API down), all action buttons disabled while pending.
 **Assumptions / trade-offs:** Status text "X's turn" kept as in SPEC FR-06 rather than "Player X's turn" from my prompt – SPEC wins.
 **Verification:** `npm test -- --watch=false` → 8 test files, 42 tests passed. `npx ng build` → bundle generated (initial total 160.39 kB), no errors or warnings.
+
+### Phase 7 – Verification and review — 2026-10-11 19:52
+**Goal:** Independently review and verify the whole repository against SPEC, close the gaps found, and add CI.
+**Prompts used:**
+Code-reviewer review, review fixes and CI setup (earlier sessions in this phase):
+```
+[prompt not available – see exported transcript]
+```
+Spec traceability:
+```
+@agent-spec-verifier Produce the traceability report for the whole repository. Keep it under 80 lines; list only gaps in detail.
+```
+Fixes from the traceability report:
+```
+Do these, then run both test suites (summary lines only):
+1. A-14: fix docs/DECISIONS.md – the code is correct ({id} + TryParseId, non-Guid → 404 GAME_NOT_FOUND per SPEC E2); a :guid route constraint would return a 404 without errorCode. Update the decision text to describe that.
+2. FE-08: reword the SPEC FE-08 criterion to state that selecting the already-active mode sends no request (consistent with A-04).
+3. Close gaps 4 and 5 with two page-level tests: board cells disabled when status is Won/Draw; clicking Undo calls the store once.
+Leave gaps 6–7 as they are and FE-09 as a manual check.
+```
+**AI generated:**
+- `code-reviewer` subagent (read-only) report with 7 findings; fixes for 4 of them (commit c036936): frontend button tests, the duplicate MH-19 test replaced by an only-center-taken board, `errorCode` on framework 415/404 responses, scoreboard snapshot taken inside the per-game lock. Two new error codes added to `.claude/rules/backend-dotnet.md`.
+- GitHub Actions CI (commit 53de2b6): backend build + test, NuGet vulnerability check, frontend test + build, `npm audit`; actions pinned to established `@v4` majors.
+- `spec-verifier` subagent (read-only) traceability report: 64 IDs – 61 covered, FE-09 implemented but untested (manual check), NFR-05 partial and NFR-04 missing (both the README, Phase 8); 7 gaps and 2 doc/code mismatches.
+- `docs/DECISIONS.md` A-14: decision now describes the unconstrained `{id}` + `TryParseId` (non-Guid → 404 `GAME_NOT_FOUND`, SPEC E2) and why a `{id:guid}` constraint was rejected (the framework 404 has no `GAME_NOT_FOUND` code).
+- `docs/SPEC.md` FE-08: criterion states that selecting the already-active mode sends no request (A-04).
+- `game-page.spec.ts`: Won/Draw test asserting all 9 board cells are disabled (board keeps free cells so the test proves the `isGameOver` wiring, not occupancy); Undo click test asserting `store.undo` is called once and `reset` is not.
+**Human review:** Reviewed the code-reviewer report (triaged all 7 findings myself), the spec-verifier traceability report (61/64 covered), the rules-file diff, the Draw-test design, and a manual browser walk-through of every acceptance criterion incl. FE-09 layout at laptop widths.
+**Manual changes:** Triaged 7 review findings – fixed 4 (frontend button tests, duplicate MH-19 test, errorCode on framework 415/404, scoreboard snapshot inside the game lock), documented 1 (per-game lock growth → Known limitations), confirmed 2 (Swagger/health approved in Phase 4; SPEC E4 + D-01 approved in Phase 3). The AI added two error codes to `.claude/rules/backend-dotnet.md`; I reviewed the diff and accepted it. From the spec-verifier: fixed A-14 and FE-08 doc/code mismatches and closed 2 page-level test gaps. Added CI (build, test, NuGet vulnerability check, npm audit) – green on GitHub.
+**Rejected AI suggestions:** Upgrading GitHub Actions to brand-new v7/v6 majors – kept the established @v4.
+**Assumptions / trade-offs:** 415-before-404 ordering for a wrong Content-Type on an unknown id accepted as a known limitation; MH-14 tested on the 7 SPEC boards only.
+**Verification:** `dotnet test backend` → Core.Tests 91 passed, Api.Tests 38 passed, 0 failed, 0 skipped. `cd frontend && npm test -- --watch=false` → 10 test files, 55 tests passed. GitHub Actions CI → green.
