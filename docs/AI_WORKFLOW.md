@@ -334,3 +334,40 @@ Context budget: keep this session lean.
 **Rejected AI suggestions:** None.
 **Assumptions / trade-offs:** Kept the CLI defaults (standalone, zoneless, Vitest). Document the NODE_ENV=production / `npm install --include=dev` workaround in the README. Note: frontend/ was committed as part of the "docs: log phase 4 AI workflow" commit (8a8d851) because both tabs share one working tree.
 **Verification:** `npx ng build` → first run failed (`Could not find the '@angular/build:application' builder's node package` – devDependencies not installed); after `npm install --include=dev` → bundle generated, initial total 93.59 kB, no warnings. `npm test -- --watch=false` → 1 test file, 2 tests passed.
+
+### Phase 5b – Angular data layer — 2026-10-11 19:18
+**Goal:** Typed API models, an HttpClient wrapper and a signal-based store with no game rules, plus unit tests.
+**Prompts used:**
+```
+Phase 5b – data layer. Use the angular-developer skill.
+
+Create in frontend/src/app/game/:
+1. game.models.ts – types that mirror the API contract in @docs/SPEC.md section 5 field for field (GameState, MoveEntry, Scoreboard, MoveRequest, CreateGameRequest, ProblemDetails; string unions for Player, GameMode, GameStatus).
+2. game-api.service.ts – HttpClient wrapper, one method per endpoint, relative /api URLs.
+3. game.store.ts – a signal-based store with state, pending and error signals; methods newGame(mode), play(row, col), undo(), reset(), resetScoreboard(); computed statusMessage, isGameOver, canUndo (straight from the API's canUndo). It must not implement any game rule. Ignore actions while a request is pending. Map ProblemDetails.detail to error.
+4. Unit tests – HttpTestingController for every GameApiService method (URL, verb, body), and store tests for success, error mapping and the pending guard.
+
+Run `npm test -- --watch=false` and `npx ng build`.
+```
+```
+Context budget: keep this session lean.
+- Read only the files you need; reference SPEC sections by number instead of re-reading the whole file.
+- Don't paste full file contents or full test output back to me – show a diff summary and the pass/fail summary line only.
+- If a step needs a broad search or review, delegate it to a subagent so its output doesn't fill this context.
+- Stop and tell me if you think the context is getting full before the task is done.
+```
+```
+Approved. Go ahead, run npm test -- --watch=false and npx ng build, summary lines only.
+```
+**AI generated:**
+- Presented a plan first (CLAUDE.md rule for changes touching more than 2 files); it flagged `app.config.ts` as an extra file that the prompt did not list.
+- `game.models.ts`: SPEC §5 types with string unions; `currentPlayer` and `winner` can be `null` (A-08).
+- `game-api.service.ts`: root-provided `HttpClient` wrapper with one method per endpoint (E1–E7) on relative `/api` URLs; undo, reset and scoreboard reset send a `null` body.
+- `game.store.ts`: read-only `state`, `pending` and `error` signals; computed `isGameOver`, `canUndo` (from the API) and `statusMessage` (formatting only). A single `run()` helper ignores actions while a request is pending, maps `ProblemDetails.detail` to `error` (fallback message for non-ProblemDetails errors), leaves the state unchanged on errors and clears the error on success. `play` sends the API's `currentPlayer` back as `player` (A-05, the server validates it); `resetScoreboard` merges the returned scoreboard into `state.scoreboard`; `clearError()` added for FE-07.
+- `app.config.ts`: added `provideHttpClient()`.
+- `game-api.service.spec.ts` (7 tests) and `game.store.spec.ts` (16 tests). After reading `.claude/rules/testing.md`, renamed the tests to the `it('should …')` style and split a combined undo/reset test.
+**Human review:** Reviewed game.models.ts against SPEC §5 field names; game.store.ts to confirm no game rules (statusMessage only formats API fields; canUndo comes from the API); the pending-guard test.
+**Manual changes:** None.
+**Rejected AI suggestions:** None.
+**Assumptions / trade-offs:** Store tests use the real GameApiService + HttpTestingController instead of mocks, so the actual HTTP contract is exercised. Note: the path-scoped testing rule made Claude rename tests to it('should …') and split a combined test – rules enforcing standards without me intervening.
+**Verification:** `npm test -- --watch=false` → 3 test files, 24 tests passed. `npx ng build` → bundle generated, no errors or warnings.
