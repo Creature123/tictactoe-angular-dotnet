@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore backend
+
+      - name: Build
+        run: dotnet build backend --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test backend --no-build --configuration Release
+
+      # `dotnet list package --vulnerable` exits 0 even when it finds something, so check its output.
+      - name: Check for vulnerable packages
+        run: |
+          dotnet list backend package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          if grep -q "has the following vulnerable packages" vulnerable.txt; then
+            echo "::error::Vulnerable NuGet packages found"
+            exit 1
+          fi
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci --include=dev
+
+      - name: Build
+        run: npx ng build
+
+      - name: Test
+        run: npm test -- --watch=false
+
+      - name: Audit
+        run: npm audit --audit-level=high
