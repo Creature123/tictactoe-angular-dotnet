@@ -1,0 +1,26 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+coverage*/
+
+# Angular / Node
+node_modules/
+dist/
+.angular/
+coverage/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Claude Code: personal or transient files (shared config in .claude/ IS committed)
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/tests.lock
+.claude/worktrees/
