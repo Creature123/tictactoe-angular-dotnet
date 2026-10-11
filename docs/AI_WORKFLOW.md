@@ -40,7 +40,7 @@ AI output, and my own review and changes. Each phase entry is appended at the en
 | Phase | What the AI produced | Why it was wrong | How I caught it | Fix |
 |-------|----------------------|------------------|-----------------|-----|
 | Phase 1 | SPEC tie-break for "block" didn't cover an X fork (two threats) | Computer behaviour would be non-deterministic and untestable in a fork | Reviewed §6 strategy against my own walk-through scenarios | Required "block the lowest-indexed cell" + example T2 |
-
+| Phase 2 | global.json was placed in backend/ | dotnet resolves global.json from the working directory upward; commands run from the repo root would ignore it and could pick the .NET 6 SDK | Claude flagged it after creating the file; I verified with `dotnet --version` from the root | Moved global.json to the repo root |
 ## Phase log
 <!-- Entries are appended below by /ai-workflow-log -->
 

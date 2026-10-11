@@ -1,0 +1,8 @@
+@TicTacToe.Api_HostAddress = http://localhost:5080
+
+# One sample request per endpoint is added here as each endpoint is implemented.
+
+GET {{TicTacToe.Api_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###
