@@ -1,8 +1,42 @@
 @TicTacToe.Api_HostAddress = http://localhost:5080
 
-# One sample request per endpoint is added here as each endpoint is implemented.
+### E1: create a game (mode: TwoPlayer or VsComputer)
+# @name createGame
+POST {{TicTacToe.Api_HostAddress}}/api/games
+Content-Type: application/json
 
-GET {{TicTacToe.Api_HostAddress}}/openapi/v1.json
+{ "mode": "TwoPlayer" }
+
+### E2: read the game
+@gameId = {{createGame.response.body.$.id}}
+GET {{TicTacToe.Api_HostAddress}}/api/games/{{gameId}}
 Accept: application/json
 
-###
+### E3: play a move (0-based row/col)
+POST {{TicTacToe.Api_HostAddress}}/api/games/{{gameId}}/moves
+Content-Type: application/json
+
+{ "player": "X", "row": 0, "col": 0 }
+
+### E3 (invalid): row outside 0..2 → 400 OUT_OF_BOUNDS
+POST {{TicTacToe.Api_HostAddress}}/api/games/{{gameId}}/moves
+Content-Type: application/json
+
+{ "player": "O", "row": 3, "col": 0 }
+
+### E4: undo the last move
+POST {{TicTacToe.Api_HostAddress}}/api/games/{{gameId}}/undo
+
+### E5: reset the game (same id and mode)
+POST {{TicTacToe.Api_HostAddress}}/api/games/{{gameId}}/reset
+
+### E6: read the scoreboard
+GET {{TicTacToe.Api_HostAddress}}/api/scoreboard
+Accept: application/json
+
+### E7: reset the scoreboard
+POST {{TicTacToe.Api_HostAddress}}/api/scoreboard/reset
+
+### OpenAPI document (Development only)
+GET {{TicTacToe.Api_HostAddress}}/openapi/v1.json
+Accept: application/json

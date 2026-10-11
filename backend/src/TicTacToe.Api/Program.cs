@@ -1,17 +1,45 @@
+using System.Text.Json.Serialization;
+using TicTacToe.Api;
+
+const string FrontendCorsPolicy = "Frontend";
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services
+    .AddControllers()
+    // Enums travel as strings; numbers are rejected so "player": 1 is an INVALID_REQUEST (BE-11).
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)))
+    // Actions check ModelState themselves, after the game lookup, so 404 wins over 400 (A-10).
+    .ConfigureApiBehaviorOptions(options => options.SuppressModelStateInvalidFilter = true);
+
+builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
+builder.Services.AddCors(options => options.AddPolicy(FrontendCorsPolicy, policy =>
+    policy.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod()));
+builder.Services.AddTicTacToe();
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+// Unexpected exceptions also become ProblemDetails (without internals).
+app.UseExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
+    app.UseCors(FrontendCorsPolicy);
     app.MapOpenApi();
+    // Interactive UI for reviewers; the document itself still comes from Microsoft.AspNetCore.OpenApi.
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "TicTacToe API v1");
+        options.RoutePrefix = "swagger";
+    });
+    app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 }
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
 
