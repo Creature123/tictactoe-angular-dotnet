@@ -130,6 +130,12 @@ Finish with the test summary and a 10-line explanation of the design that I coul
 
 ```text
 Without changing any code: review your implementation against @docs/SPEC.md sections 3, 4 and 6. List, ranked by risk: requirements that pass only because of the specific test data, duplicated logic, unclear names, and anything a senior reviewer would question. For each item, say what you would change.
+
+Context budget: keep this session lean.
+- Read only the files you need; reference SPEC sections by number instead of re-reading the whole file.
+- Don't paste full file contents or full test output back to me – show a diff summary and the pass/fail summary line only.
+- If a step needs a broad search or review, delegate it to a subagent so its output doesn't fill this context.
+- Stop and tell me if you think the context is getting full before the task is done.
 ```
 
 Afterwards: `rm .claude/tests.lock`
