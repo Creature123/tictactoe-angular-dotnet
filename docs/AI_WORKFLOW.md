@@ -138,3 +138,57 @@ Move global.json from backend/ to the repo root so it applies when commands run 
 **Rejected AI suggestions:** None. I accepted two out-of-plan changes after review: removing UseAuthorization (no auth in scope – no dead middleware) and the host smoke test (cheap proof the API starts).
 **Assumptions / trade-offs:** .slnx solution format (the .NET 10 default; needs SDK 10 to open, acceptable since global.json pins it). HTTP-only on :5080 with no HTTPS redirect – fine for a local-only exercise, listed as a known limitation.
 **Verification:** `dotnet --version` (repo root) → 10.0.400. `dotnet build backend` → Build succeeded, 0 warnings, 0 errors. `dotnet test backend` → 1 passed, 0 failed, 0 skipped (Api.Tests); Core.Tests has no tests yet. Committed as `82e999f`.
+
+### Phase 3a – Domain tests (RED) — 2026-10-11 13:42
+**Goal:** Write failing (RED) xUnit domain tests from SPEC for Game, the computer strategy, Scoreboard and GameService, with compile-only stubs and no production logic.
+**Prompts used:**
+```text
+Phase 3a – domain tests first (RED). Use the modern-csharp-coding-standards skill.
+
+From @docs/SPEC.md, write xUnit tests in backend/tests/TicTacToe.Core.Tests for TicTacToe.Core: the Game domain, the computer strategy, the Scoreboard and the GameService (with the in-memory repository). Write NO production logic yet.
+
+Cover at least:
+- valid move; invalid moves (out of bounds, occupied cell, wrong player, move after completion), each also asserting the turn did not change
+- turn switching
+- row win, column win, both diagonals – assert the winner AND the winning cells
+- draw (full board, no winner)
+- reset game – board, history and status cleared; X to move; same mode; scoreboard unchanged
+- undo in two-player mode (removes 1 move, turn restored); undo with no moves → rejected; undo after completion → rejected (Option A)
+- undo in computer mode (removes the computer's move and the human's previous move; X to move; board as before X's move)
+- scoreboard – X win, O win and draw each counted exactly once; a rejected move after completion doesn't count again; Reset Scoreboard zeroes all counts
+- computer strategy – one test per priority rule (win, block, center, corner, any), a test that winning beats blocking, a corner tie-break test, and a test that the computer does not move once the game is over
+
+Rules:
+- Tag every test with [Trait("Req", "<SPEC ID>")].
+- Build positions from explicit move sequences so a reader can replay the board.
+- For each computer-strategy test, use a board where ONLY the rule under test decides the answer, and add a one-line comment explaining why.
+- Create only the minimal public types and signatures needed to compile; method bodies throw NotImplementedException.
+- Run `dotnet test backend` and confirm the tests fail with NotImplementedException, not compile errors.
+
+Before writing, show me the test names grouped by requirement ID.
+
+Context budget: keep this session lean.
+- Read only the files you need; reference SPEC sections by number instead of re-reading the whole file.
+- Don't paste full file contents or full test output back to me – show a diff summary and the pass/fail summary line only.
+- If a step needs a broad search or review, delegate it to a subagent so its output doesn't fill this context.
+- Stop and tell me if you think the context is getting full before the task is done.
+```
+```text
+Approved, including both design calls (immutable Game; computer reply inside Game.Play).
+Two notes:
+1. With immutable Game, GameService still needs the per-game lock around read → Play → record score → store, so two concurrent moves can't both read the same version. Keep that in the GREEN phase.
+2. The computer-reply location changes what CLAUDE.md says about GameService. After the tests are written, give me the one-line CLAUDE.md edit and a short DECISIONS.md entry (D-xx: computer reply in domain; Game immutable) – don't edit CLAUDE.md yourself.
+Go ahead: write stubs + tests and confirm RED.
+```
+**AI generated:**
+- Presented a plan before writing: about 50 test names grouped by SPEC ID, plus a proposed public API with two design calls for approval. (1) `Game` is immutable: `Play`, `Undo` and `Reset` return a new instance, and only `Id`, `Mode` and `Moves` are stored. (2) The VsComputer reply happens inside `Game.Play`.
+- 13 stub files in `backend/src/TicTacToe.Core`: enums `Player`, `GameMode`, `GameStatus`, `GameError` (in A-10 precedence order); records `Position`, `Move` (sealed record), `GameResult(Game?, GameError?)`, `ScoreSnapshot`; plus `Game`, `ComputerStrategy`, `Scoreboard`, `IGameRepository`, `InMemoryGameRepository`, `GameService`. Every method and derived property throws `NotImplementedException`.
+- `GameBuilder.cs` test helper: `TwoPlayer(...)` and `VsComputer(...)` build games from replayable move sequences, `.Ok()` asserts success, and `AsText()` renders boards as strings like `"XX.OO...X"`.
+- `GameTests.cs` (37 cases), `ComputerStrategyTests.cs` (17) and `GameServiceTests.cs` (17). Every test has a `[Trait("Req", …)]`. Computer-scoring tests also carry the T-06/T-07 transition IDs.
+- Hand-traced positions. Each strategy board is decided by a single rule and has a one-line comment saying why. There is an extra pure-win board (`OXXXO....` → 8) alongside §6-E1 (win beats block), and a corner tie-break board (X(1,1) O(0,0) X(2,2) → 2). Two deterministic VsComputer games: X beats the computer with a fork (X0 X8 X6 X7), and the computer wins (X0 X1 X3 → O6).
+- Proposed a one-line CLAUDE.md "Computer Mode" edit and a DECISIONS.md entry D-01 (immutable `Game`; computer reply in the domain) for the human to apply. The AI edited neither file.
+**Human review:** Reviewed line by line: ComputerStrategyTests (checked every board against SPEC §6 and the one-rule comments), the undo tests (assert board, turn, move count and status), MH-15 / the X-fork game (replayed X0 X8 X6 X7 by hand), and GameBuilder.
+**Manual changes:** Applied the CLAUDE.md "Computer Mode" edit and appended D-01 to DECISIONS.md myself. Before approving the immutable-Game design I required that GameService keeps the per-game lock across read → Play → score → store, so concurrent moves can't build on the same version. No test changes before commit 248720c.
+**Rejected AI suggestions:** None. Accepted the three small deviations (GameError in A-10 order, T-06/T-07 traits, Move as sealed record) after review.
+**Assumptions / trade-offs:** Immutable Game allocates a new object per move (≤ 9 moves) – negligible – in exchange for race-free snapshots and domain-level enforcement of the computer rules.
+**Verification:** `dotnet build` of the stubs → 0 errors. `dotnet test backend` → Core.Tests: 71 failed, 0 passed, 0 skipped. All 71 failures are `System.NotImplementedException`; there were no compile errors or assertion failures. Api.Tests: 1 passed. Committed as `248720c`.
