@@ -92,9 +92,9 @@ The `.claude/rules` files and CLAUDE.md fix the HTTP status codes, error codes a
 
 ## A-14 — Guid game ids; a non-Guid id returns 404
 - **Context:** The brief does not define the id format.
-- **Options considered:** (a) Guid, with a route constraint; a malformed id returns 404 `GAME_NOT_FOUND`. (b) Sequential integers.
-- **Decision:** (a).
-- **Consequences:** Ids cannot be guessed and are never reused. A non-Guid id gets the same 404 as an unknown id.
+- **Options considered:** (a) Guid ids. (b) Sequential integers.
+- **Decision:** (a). The route takes an unconstrained `{id}` and the controller parses it with `TryParseId`; a non-Guid id returns 404 `GAME_NOT_FOUND` (SPEC E2). A `{id:guid}` route constraint was rejected: an unmatched route gives the framework's 404, which has no `GAME_NOT_FOUND` code.
+- **Consequences:** Ids cannot be guessed and are never reused. A non-Guid id gets the same 404 `GAME_NOT_FOUND` as an unknown id.
 
 ## A-15 — Board sent as a flat 9-cell array
 - **Context:** The brief asks for the "Board state" without a format.

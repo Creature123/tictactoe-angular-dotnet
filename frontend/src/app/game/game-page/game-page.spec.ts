@@ -49,7 +49,7 @@ describe('GamePage', () => {
     await fixture.whenStable();
   });
 
-  it("starts a Two Player game on init (A-16)", () => {
+  it('starts a Two Player game on init (A-16)', () => {
     expect(store.newGame).toHaveBeenCalledExactlyOnceWith('TwoPlayer');
   });
 
@@ -76,6 +76,39 @@ describe('GamePage', () => {
     button('Computer').click();
 
     expect(store.newGame).toHaveBeenCalledExactlyOnceWith('VsComputer');
+  });
+
+  it.each(['Won', 'Draw'] as const)(
+    'disables the board cells when the game is %s (FE-01, FR-16)',
+    async (status) => {
+      // The page disables the board from isGameOver alone, so free cells are kept to make the check meaningful.
+      store.state.set(
+        gameState({
+          status,
+          currentPlayer: null,
+          board: ['X', 'X', 'X', 'O', 'O', null, null, null, null],
+        }),
+      );
+      store.isGameOver.set(true);
+      await fixture.whenStable();
+
+      const cells = Array.from<HTMLButtonElement>(
+        fixture.nativeElement.querySelectorAll('app-board button'),
+      );
+      expect(cells).toHaveLength(9);
+      expect(cells.every((cell) => cell.disabled)).toBe(true);
+    },
+  );
+
+  it('sends one undo when Undo Last Move is clicked (FE-05)', async () => {
+    store.state.set(gameState({ canUndo: true }));
+    store.canUndo.set(true);
+    await fixture.whenStable();
+
+    button('Undo Last Move').click();
+
+    expect(store.undo).toHaveBeenCalledOnce();
+    expect(store.reset).not.toHaveBeenCalled();
   });
 
   it('sends one reset when Reset Game is clicked (FE-05)', async () => {

@@ -87,7 +87,7 @@ Each criterion is written to be tested by a single test. Positions in criteria a
 | FE-05 | FE | Reset Game, Undo Last Move and Reset Scoreboard buttons call the API | When each button is clicked, Then exactly one matching HTTP request is sent (HttpTestingController) |
 | FE-06 | FE, C1 | Renders only the backend state; no game rules on the client | Given any API response, Then the UI state comes from it; Undo is enabled iff `canUndo && !pending` |
 | FE-07 | FE, AC | Invalid actions show the ProblemDetails message | Given a 409 response, When it arrives, Then its `detail` is shown in a dismissible message and the board is unchanged |
-| FE-08 | MH§4 | The user can pick the mode | Given the mode selector, When the user picks a mode, Then `POST /api/games {mode}` is sent and the new game is rendered (A-04) |
+| FE-08 | MH§4 | The user can pick the mode | Given the mode selector, When the user picks a mode, Then `POST /api/games {mode}` is sent and the new game is rendered; selecting the mode that is already active sends no request (A-04) |
 | FE-09 | FE | Comfortable on a laptop browser | Given a 1024–1920 px wide viewport, Then nothing overflows horizontally and every control is visible without zooming |
 
 ### 2.5 Non-functional and deliverables (NFR)
